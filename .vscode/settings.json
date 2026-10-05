@@ -1,0 +1,6 @@
+{
+  // Inject the variables from .env into every NEW integrated terminal.
+  // After editing .env, open a new terminal (or restart the old one): variables
+  // already set in a terminal win over .env, so an old terminal keeps old values.
+  "python.terminal.useEnvFile": true
+}

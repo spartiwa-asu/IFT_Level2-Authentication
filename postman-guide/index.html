@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Postman End-to-End Guide</title>
+<link rel="icon" href="data:,">
+<style>
+:root {
+  --bg: #f4f6fa; --surface: #ffffff; --surface-2: #eef2f7; --text: #16202c; --muted: #566476; --border: #d3dbe6;
+  --accent: #174ea6; --accent-soft: #e3ecfb; --pm: #ff6c37; --pm-soft: #fff0ea;
+  --ok: #1e6b35; --ok-soft: #e4f4e8; --warn: #8a5a00; --warn-soft: #fdf3dc; --bad: #9b1c14; --bad-soft: #fdeceb;
+  --code-bg: #1e2430; --code-text: #dfe6ef; --code-muted: #8391a5;
+  --radius: 10px; --shadow: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 8%);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f141b; --surface: #171d26; --surface-2: #1e2531; --text: #e6ebf2; --muted: #9aa7b8; --border: #2c3544;
+    --accent: #7aa7ff; --accent-soft: #1d2a44; --pm: #ff8a5c; --pm-soft: #3a2218; --ok: #6fd08c; --ok-soft: #16301f;
+    --warn: #f0c060; --warn-soft: #33290f; --bad: #ff8a80; --bad-soft: #3a1b1a; --code-bg: #0b0f15; --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f141b; --surface: #171d26; --surface-2: #1e2531; --text: #e6ebf2; --muted: #9aa7b8; --border: #2c3544;
+  --accent: #7aa7ff; --accent-soft: #1d2a44; --pm: #ff8a5c; --pm-soft: #3a2218; --ok: #6fd08c; --ok-soft: #16301f;
+  --warn: #f0c060; --warn-soft: #33290f; --bad: #ff8a80; --bad-soft: #3a1b1a; --code-bg: #0b0f15; --shadow: none;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 16px; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+a { color: var(--accent); }
+code, kbd, pre, input.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9em; }
+:not(pre) > code { background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; overflow-wrap: anywhere; }
+kbd { display: inline-block; min-width: 1.8em; text-align: center; padding: 1px 6px; border: 1px solid var(--border); border-bottom-width: 3px; border-radius: 5px; background: var(--surface); font-weight: 600; }
+button { font: inherit; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); max-width: 1320px; margin: 0 auto; }
+nav.toc { position: sticky; top: 0; height: 100vh; overflow-y: auto; padding: 24px 12px 24px 20px; border-right: 1px solid var(--border); }
+nav.toc .brand { font-weight: 800; font-size: 15px; }
+nav.toc .sub { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+nav.toc ol { list-style: none; margin: 0; padding: 0; counter-reset: toc; }
+nav.toc li a { display: flex; gap: 8px; align-items: center; padding: 6px 10px; border-radius: 6px; color: var(--text); text-decoration: none; font-size: 14px; }
+nav.toc li a::before { counter-increment: toc; content: counter(toc); flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--surface-2); color: var(--muted); font-size: 11px; font-weight: 700; display: grid; place-items: center; }
+nav.toc li a.done::before { content: "✓"; background: var(--ok-soft); color: var(--ok); }
+nav.toc li a.active { background: var(--pm-soft); color: var(--pm); font-weight: 600; }
+.progress { margin: 16px 10px 0; font-size: 13px; color: var(--muted); }
+.bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; margin-top: 6px; }
+.bar > span { display: block; height: 100%; width: 0; background: var(--ok); transition: width .3s; }
+.theme-toggle { margin: 16px 10px 0; padding: 6px 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 6px; font-size: 13px; }
+
+main { padding: 32px 40px 80px; min-width: 0; }
+header.hero h1 { font-size: clamp(26px, 4vw, 36px); line-height: 1.2; margin: 0 0 8px; }
+header.hero p { color: var(--muted); max-width: 780px; margin: 0 0 12px; }
+section.step { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 28px; margin-top: 24px; box-shadow: var(--shadow); }
+section.step > h2 { margin: 0 0 4px; font-size: 24px; display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+section.step > h2 .num { color: var(--pm); font-size: 15px; font-weight: 700; }
+section.step > .lead { color: var(--muted); margin: 0 0 16px; }
+section.step.key { border: 2px solid var(--pm); }
+h3 { font-size: 18px; margin: 24px 0 8px; }
+.done-toggle { display: inline-flex; align-items: center; gap: 8px; margin-top: 20px; padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-weight: 600; }
+.done-toggle[aria-pressed="true"] { background: var(--ok-soft); border-color: transparent; color: var(--ok); }
+
+ol.steps { padding-left: 0; list-style: none; counter-reset: s; margin: 0; }
+ol.steps > li { counter-increment: s; position: relative; padding: 10px 0 10px 44px; border-bottom: 1px dashed var(--border); }
+ol.steps > li:last-child { border-bottom: 0; }
+ol.steps > li::before { content: counter(s); position: absolute; left: 0; top: 10px; width: 28px; height: 28px; border-radius: 50%; background: var(--pm); color: #fff; font-weight: 700; font-size: 14px; display: grid; place-items: center; }
+
+.cmd { display: flex; align-items: center; gap: 8px; margin: 6px 0; background: var(--code-bg); color: var(--code-text); border-radius: 6px; padding: 8px 8px 8px 12px; }
+.cmd code { flex: 1; background: none; border: 0; color: inherit; padding: 0; overflow-x: auto; white-space: pre; }
+.copy { flex: none; padding: 4px 10px; border-radius: 4px; border: 1px solid #3a4454; background: #2a3240; color: #dfe6ef; font-size: 12px; }
+pre.block { background: var(--code-bg); color: var(--code-text); border-radius: 8px; padding: 12px 14px; overflow-x: auto; font-size: 13px; line-height: 1.5; margin: 8px 0; }
+pre.block .ok { color: #7ee2a0; } pre.block .bad { color: #ff9b94; } pre.block .dim { color: var(--code-muted); } pre.block .req { color: #9cc3ff; }
+
+.note { border-left: 4px solid var(--accent); background: var(--accent-soft); padding: 10px 14px; border-radius: 0 6px 6px 0; margin: 14px 0; }
+.note.warn { border-color: var(--warn); background: var(--warn-soft); }
+.note.bad { border-color: var(--bad); background: var(--bad-soft); }
+.note.ok { border-color: var(--ok); background: var(--ok-soft); }
+.note.pm { border-color: var(--pm); background: var(--pm-soft); }
+.note > :first-child { margin-top: 0; } .note > :last-child { margin-bottom: 0; }
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .03em; }
+.table-wrap { overflow-x: auto; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+.badge { display: inline-block; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px; }
+.badge.s2 { background: var(--ok-soft); color: var(--ok); } .badge.s4 { background: var(--bad-soft); color: var(--bad); }
+.tag-real, .tag-ill { display: inline-block; font-size: 12px; border-radius: 999px; padding: 0 8px; margin-left: 6px; border: 1px solid var(--border); color: var(--muted); }
+.tag-ill { border-style: dashed; }
+
+/* illustration of Postman's request pane */
+.pm-window { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); font-size: 14px; }
+.pm-window .cap { display: flex; justify-content: space-between; gap: 8px; padding: 6px 12px; background: var(--surface-2); border-bottom: 1px solid var(--border); color: var(--muted); font-size: 12px; }
+.pm-urlbar { display: flex; gap: 8px; padding: 12px; align-items: stretch; flex-wrap: wrap; }
+.pm-method { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-weight: 700; }
+.pm-method.get { color: #0f7b3e; } .pm-method.post { color: #a86400; }
+.pm-url { flex: 1; min-width: 200px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-family: ui-monospace, Menlo, monospace; font-size: 13px; overflow-wrap: anywhere; }
+.pm-url .var { color: var(--pm); }
+.pm-send { padding: 6px 18px; border-radius: 6px; background: #097bed; color: #fff; font-weight: 700; }
+.pm-tabs { display: flex; gap: 18px; padding: 0 12px; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.pm-tabs span { padding: 8px 0; color: var(--muted); white-space: nowrap; }
+.pm-tabs span.on { color: var(--text); border-bottom: 2px solid var(--pm); font-weight: 600; }
+.pm-body { padding: 14px 12px; display: grid; gap: 10px; }
+.pm-row { display: grid; grid-template-columns: 110px 1fr; gap: 10px; align-items: center; }
+.pm-row label { color: var(--muted); font-size: 13px; }
+.pm-field { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-family: ui-monospace, Menlo, monospace; font-size: 13px; overflow-wrap: anywhere; }
+.pm-field.hl { border: 2px solid var(--pm); background: var(--pm-soft); }
+.pm-kv { display: grid; grid-template-columns: 24px max-content 1fr; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+.pm-kv > * { padding: 6px 8px; border-bottom: 1px solid var(--border); font-size: 13px; }
+.pm-kv .h { background: var(--surface-2); color: var(--muted); font-weight: 600; }
+.pm-kv .hl { background: var(--pm-soft); font-family: ui-monospace, Menlo, monospace; overflow-wrap: anywhere; }
+.pm-callout { font-size: 13px; color: var(--pm); font-weight: 600; }
+
+/* way picker + checker */
+.ways { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.way { border: 1px solid var(--border); border-radius: 10px; padding: 16px; background: var(--surface); }
+.way h3 { margin-top: 0; }
+.way .rule { font-size: 18px; font-weight: 800; margin: 6px 0 10px; }
+.way.one .rule { color: var(--ok); }
+.way.two .rule { color: var(--pm); }
+.checker { border: 2px dashed var(--pm); border-radius: 10px; padding: 16px; margin-top: 20px; }
+.checker .controls { display: grid; gap: 10px; }
+.checker input.mono { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; flex-wrap: wrap; }
+.seg button { padding: 6px 12px; border: 0; background: var(--surface); color: var(--text); }
+.seg button[aria-pressed="true"] { background: var(--pm); color: #fff; }
+.result { margin-top: 12px; }
+.result .sent { background: var(--code-bg); color: var(--code-text); border-radius: 6px; padding: 10px 12px; font-family: ui-monospace, Menlo, monospace; font-size: 13px; overflow-wrap: anywhere; }
+.verdict { margin-top: 10px; padding: 10px 12px; border-radius: 6px; font-weight: 600; }
+.verdict.ok { background: var(--ok-soft); color: var(--ok); }
+.verdict.bad { background: var(--bad-soft); color: var(--bad); }
+.verdict ul { margin: 6px 0 0; font-weight: 400; }
+
+details.ex { border: 1px solid var(--border); border-radius: 8px; margin: 10px 0; background: var(--surface); }
+details.ex > summary { padding: 12px 14px; cursor: pointer; font-weight: 600; list-style: none; display: flex; gap: 10px; }
+details.ex > summary::-webkit-details-marker { display: none; }
+details.ex > summary::before { content: "▸"; color: var(--muted); }
+details.ex[open] > summary::before { content: "▾"; }
+details.ex .body { padding: 0 14px 14px 36px; }
+
+@media (max-width: 960px) {
+  .layout { grid-template-columns: 1fr; }
+  nav.toc { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--border); padding: 16px; }
+  nav.toc ol { display: flex; flex-wrap: wrap; gap: 4px; }
+  main { padding: 20px 16px 60px; }
+  section.step { padding: 18px 16px; }
+  .pm-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="toc" aria-label="Guide sections">
+    <div class="brand">IFT 458 · Level 2</div>
+    <div class="sub">Test the API end to end with Postman</div>
+    <ol id="toc"></ol>
+    <div class="progress"><span id="progress-text"></span><div class="bar"><span id="progress-bar"></span></div></div>
+    <button class="theme-toggle" id="theme-toggle" type="button">Toggle dark mode</button>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <h1>Test the Level 2 API with Postman</h1>
+      <p>You will sign up, log in, copy your token, <b>authorize</b> your requests with it, and then create, read, update and delete games and scores. At the end you will run the whole thing in one click.</p>
+      <p>Responses marked <span class="tag-real">real response</span> were recorded from this project's API. Pictures of Postman's window are marked <span class="tag-ill">illustration</span>: they show which box to use, not a screenshot. Postman's layout changes between versions, so look for the same labels.</p>
+    </header>
+
+    <!-- 1 -->
+    <section class="step" id="before" data-title="Before you start">
+      <h2><span class="num">STEP 1</span> Before you start</h2>
+      <ol class="steps">
+        <li><b>Start the API</b> in the project folder and wait for <code>DB connection successful</code>:
+          <div class="cmd"><code>npm start</code><button class="copy" type="button">Copy</button></div></li>
+        <li><b>Install the Postman desktop app</b> from <a href="https://www.postman.com/downloads/" target="_blank" rel="noopener">postman.com/downloads</a> and sign in, or use it without an account if it offers that.</li>
+        <li><b>Using Postman in a web browser instead?</b> It cannot reach <code>localhost</code> on its own. Install the <b>Postman Desktop Agent</b> when it asks, and choose it in the agent selector at the bottom right. The desktop app needs no agent.</li>
+      </ol>
+      <div class="note"><p><b>Why Postman never shows a CORS error:</b> CORS is enforced by web browsers. Postman is not a browser page, so it ignores <code>CORS_ORIGINS</code>. If a request works in Postman but not in the browser client, the difference is CORS.</p></div>
+      <button class="done-toggle" type="button" aria-pressed="false">Mark this section done</button>
+    </section>
+
+    <!-- 2 -->
+    <section class="step" id="signup" data-title="Sign up">
+      <h2><span class="num">STEP 2</span> Sign up (no token needed)</h2>
+      <p class="lead">Create a new request: <b>New → HTTP</b> (or the <b>+</b> tab).</p>
+      <div class="pm-window" aria-label="Illustration of Postman's request pane for signup">
+        <div class="cap"><span>Postman request pane</span><span class="tag-ill">illustration</span></div>
+        <div class="pm-urlbar"><span class="pm-method post">POST</span><span class="pm-url">http://localhost:4001/api/v1/users/signup</span><span class="pm-send">Send</span></div>
+        <div class="pm-tabs"><span>Params</span><span>Authorization</span><span>Headers</span><span class="on">Body</span><span>Scripts</span></div>
+        <div class="pm-body">
+          <div class="pm-callout">Body → raw → JSON</div>
+          <pre class="block" style="margin:0">{
+  "name": "Postman Student",
+  "email": "postman@ift458.test",
+  "password": "password12345",
+  "passwordConfirmation": "password12345"
+}</pre>
+        </div>
+      </div>
+      <ol class="steps">
+        <li>Set the method to <b>POST</b> and paste the URL.</li>
+        <li>Open <b>Body</b>, choose <b>raw</b>, then choose <b>JSON</b> from the dropdown on the right. Postman then sends <code>Content-Type: application/json</code> for you.</li>
+        <li>Paste the JSON, change the email to your own test address, and click <b>Send</b>.</li>
+      </ol>
+      <p><span class="badge s2">201 Created</span><span class="tag-real">real response</span></p>
+      <pre class="block">{"status":"success","data":{"user":{"id":"6abb8013415b1721f3f741c5","name":"Postman Student","email":"postman@ift458.test"}}}</pre>
+      <p class="hint">No password comes back: not in plain text, not as a hash. A <b>409</b> means that email is already registered, so use another one. A <b>400</b> means a field failed validation. Passwords need at least 8 characters, and both passwords must match.</p>
+      <button class="done-toggle" type="button" aria-pressed="false">Mark this section done</button>
+    </section>
+
+    <!-- 3 -->
+    <section class="step" id="login" data-title="Log in and copy the token">
+      <h2><span class="num">STEP 3</span> Log in and copy the token</h2>
+      <ol class="steps">
+        <li>New request: <b>POST</b> <code>http://localhost:4001/api/v1/users/login</code></li>
+        <li><b>Body → raw → JSON</b>:
+          <pre class="block">{
+  "email": "postman@ift458.test",
+  "password": "password12345"
+}</pre></li>
+        <li>Click <b>Send</b>.</li>
+      </ol>
+      <p><span class="badge s2">200 OK</span><span class="tag-real">real response</span></p>
+      <pre class="block">{
+  "status": "success",
+  "token": "<span class="ok">c716aba0df1b410ab3c69901fa045192cdaa82709a29a3a4670d4e4fb76d3e79</span>",
+  "expiresAt": "2026-09-30T09:08:35.886Z",
+  "data": { "user": { "id": "6abb8013415b1721f3f741c5", "name": "Postman Student", "email": "postman@ift458.test" } }
+}</pre>
+      <div class="note ok"><p><b>Copy only the green part</b>: the 64 characters between the quotes. Do not copy the quotes, <code>"token":</code> or any spaces.</p></div>
+      <p class="hint">This token came from a throwaway test database that no longer exists. Yours is different every time you log in. Treat it like a password: anyone who has it can act as you until it expires (24 hours by default).</p>
+      <button class="done-toggle" type="button" aria-pressed="false">Mark this section done</button>
+    </section>
+
+    <!-- 4 -->
+    <section class="step" id="noauth" data-title="See the 401 first">
+      <h2><span class="num">STEP 4</span> See the 401 first</h2>
+      <p class="lead">Before adding the token, prove that the API really requires one.</p>
+      <ol class="steps">
+        <li>New request: <b>GET</b> <code>http://localhost:4001/api/v1/games</code>, with the <b>Authorization</b> tab's Auth Type set to <b>No Auth</b>.</li>
+        <li>Click <b>Send</b>.</li>
+      </ol>
+      <p><span class="badge s4">401 Unauthorized</span><span class="tag-real">real response</span></p>
+      <pre class="block">{"status":"fail","message":"Authentication required. Log in and provide a valid bearer token."}</pre>
+      <button class="done-toggle" type="button" aria-pressed="false">Mark this section done</button>
+    </section>
+
+    <!-- 5 -->
+    <section class="step key" id="authorize" data-title="Authorize with the token">
+      <h2><span class="num">STEP 5</span> Authorize the request with your token</h2>
+      <p class="lead">The API expects this exact header: <code>Authorization: Bearer &lt;token&gt;</code>, which is the word <b>Bearer</b>, <b>one space</b>, then the token. Postman gives you two ways to send it. <b>Whether you type the word "Bearer" depends on which way you use.</b></p>
+
+      <div class="ways">
+        <div class="way one">
+          <h3>Way 1 · Authorization tab (recommended)</h3>
+          <div class="rule">Paste ONLY the token. Do NOT type "Bearer".</div>
+          <ol>
+            <li>Open the <b>Authorization</b> tab (called <b>Auth</b> in some versions).</li>
+            <li>Set <b>Auth Type</b> to <b>Bearer Token</b>.</li>
+            <li>Paste the 64-character token into the <b>Token</b> box.</li>
+            <li>Click <b>Send</b>.</li>
+          </ol>
+          <p>Postman adds the word <code>Bearer</code> and the space for you. To check, open <b>Headers</b> and show the hidden headers: you will see <code>Authorization: Bearer c716ab…</code>.</p>
+          <div class="pm-window" aria-label="Illustration of Postman's Authorization tab with Bearer Token selected">
+            <div class="cap"><span>Authorization tab</span><span class="tag-ill">illustration</span></div>
+            <div class="pm-urlbar"><span class="pm-method get">GET</span><span class="pm-url">http://localhost:4001/api/v1/games</span><span class="pm-send">Send</span></div>
+            <div class="pm-tabs"><span>Params</span><span class="on">Authorization</span><span>Headers</span><span>Body</span></div>
+            <div class="pm-body">
+              <div class="pm-row"><label>Auth Type</label><div class="pm-field hl">Bearer Token ▾</div></div>
+              <div class="pm-row"><label>Token</label><div class="pm-field hl">c716aba0df1b410ab3c69901fa045192cdaa82709a29a3a4670d4e4fb76d3e79</div></div>
+              <div class="pm-callout">↑ just the token. Postman sends "Bearer " + this.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="way two">
+          <h3>Way 2 · Headers tab (by hand)</h3>
+          <div class="rule">Type "Bearer", one space, then the token.</div>
+          <ol>
+            <li>In the <b>Authorization</b> tab, set Auth Type to <b>No Auth</b>, so Postman does not add a second header.</li>
+            <li>Open <b>Headers</b> and add a row:<br>Key <code>Authorization</code><br>Value <code>Bearer c716ab…</code></li>
+            <li>Click <b>Send</b>.</li>
+          </ol>
+          <p>Here nothing is added for you. The value must start with <code>Bearer</code> followed by exactly one space.</p>
+          <div class="pm-window" aria-label="Illustration of Postman's Headers tab with an Authorization header typed by hand">
+            <div class="cap"><span>Headers tab</span><span class="tag-ill">illustration</span></div>
+            <div class="pm-urlbar"><span class="pm-method get">GET</span><span class="pm-url">http://localhost:4001/api/v1/games</span><span class="pm-send">Send</span></div>
+            <div class="pm-tabs"><span>Params</span><span>Authorization</span><span class="on">Headers</span><span>Body</span></div>
+            <div class="pm-body">
+              <div class="pm-kv">
+                <span class="h">✓</span><span class="h">Key</span><span class="h">Value</span>
+                <span>☑</span><span class="hl">Authorization</span><span class="hl">Bearer c716aba0df1b410ab3c69901fa045192cdaa82709a29a3a4670d4e4fb76d3e79</span>
+              </div>
+              <div class="pm-callout">↑ "Bearer", one space, then the token</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p style="margin-top:16px"><span class="badge s2">200 OK</span><span class="tag-real">real response</span> (first game shown)</p>
+      <pre class="block">{"status":"success","results":5,"data":{"games":[{"_id":"6abb7ee3cc20196708a51be7","title":"Hollow Knight","developer":"Team Cherry","genre":"Metroidvania", …}]}}</pre>
+
+      <div class="checker" id="checker">
+        <h3 style="margin-top:0">Check your token before you send it</h3>
+        <p class="hint">This runs only in this page. Nothing you type is sent anywhere. Use a practice token, or paste a real one and clear it afterwards.</p>
+        <div class="controls">
+          <div class="seg" role="group" aria-label="Where are you pasting it?">
+            <button type="button" data-way="1" aria-pressed="true">Way 1 · Bearer Token box</button>
+            <button type="button" data-way="2" aria-pressed="false">Way 2 · Headers value</button>
+          </div>
+          <label for="token-input">What you are about to paste:</label>
+          <input id="token-input" class="mono" autocomplete="off" spellcheck="false" placeholder="e.g. c716aba0df1b… or Bearer c716aba0df1b…">
+          <div class="seg" role="group" aria-label="Try a common mistake">
+            <button type="button" data-example="good">Correct example</button>
+            <button type="button" data-example="double">"Bearer" in the box</button>
+            <button type="button" data-example="quotes">With quotes</button>
+            <button type="button" data-example="short">Cut off</button>
+          </div>
+        </div>
+        <div class="result" id="checker-result" aria-live="polite"></div>
+      </div>
+      <button class="done-toggle" type="button" aria-pressed="false">Mark this section done</button>
+    </section>
+
+    <!-- 6 -->
+    <section class="step" id="mistakes" data-title="Common 'Bearer' mistakes">
+      <h2><span class="num">STEP 6</span> Common "Bearer" mistakes</h2>
+      <p class="lead">Every row was sent to the real API. The last three all get the same 401: for safety, the server does not say which part was wrong.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>What you did</th><th>Header the server received</th><th>Result</th></tr></thead>
+        <tbody>
+          <tr><td>Way 1, token only in the Bearer Token box</td><td><code>Authorization: Bearer c716ab…</code></td><td><span class="badge s2">200</span></td></tr>
+          <tr><td>Way 2, typed <code>Bearer c716ab…</code> in Headers</td><td><code>Authorization: Bearer c716ab…</code></td><td><span class="badge s2">200</span></td></tr>
+          <tr><td>Typed <code>Bearer c716ab…</code> in the <b>Bearer Token</b> box</td><td><code>Authorization: Bearer Bearer c716ab…</code></td><td><span class="badge s4">401</span></td></tr>
+          <tr><td>Way 2 without the word: value <code>c716ab…</code></td><td><code>Authorization: c716ab…</code></td><td><span class="badge s4">401</span></td></tr>
+          <tr><td>Auth Type left on <b>No Auth</b> and no header</td><td>(none)</td><td><span class="badge s4">401</span></td></tr>
+          <tr><td>Copied the quotes: <code>"c716ab…"</code></td><td><code>Authorization: Bearer "c716ab…"</code></td><td><span class="badge s4">401</span></td></tr>
+          <tr><td>Token from before the API's database was reseeded, or older than 24 hours</td><td><code>Authorization: Bearer &lt;old token&gt;</code></td><td><span class="badge s4">401</span></td></tr>
+        </tbody>
+      </table></div>
+      <p class="hint">Why so strict? <code>middleware/authenticate.js</code> accepts only <code>Bearer</code>, one space, and exactly 64 hex characters: <code>/^Bearer ([a-f0-9]{64})$/i</code>. Anything else is rejected before the database is even asked.</p>
+      <button class="done-toggle" type="button" aria-pressed="false">Mark this section done</button>
+    </section>
+
+    <!-- 7 -->
+    <section class="step" id="crud" data-title="Games and scores (CRUD)">
+      <h2><span class="num">STEP 7</span> Games and scores, end to end</h2>
+      <p class="lead">Every request below needs the token, added the Way 1 or Way 2. Copy the <code>_id</code> from each create response into the next URLs.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>#</th><th>Request</th><th>Body (raw JSON)</th><th>Expect</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td><b>POST</b> <code>/games</code></td><td><code>{"title":"Stardew Valley","developer":"ConcernedApe","genre":"Simulation","description":"Farm, fish and make friends.","platform":"pc"}</code></td><td><span class="badge s2">201</span> copy <code>data.game._id</code></td></tr>
+          <tr><td>2</td><td><b>GET</b> <code>/games/&lt;id&gt;</code></td><td>none</td><td><span class="badge s2">200</span></td></tr>
+          <tr><td>3</td><td><b>PATCH</b> <code>/games/&lt;id&gt;</code></td><td><code>{"genre":"Farming simulation"}</code></td><td><span class="badge s2">200</span></td></tr>
+          <tr><td>4</td><td><b>DELETE</b> <code>/games/&lt;id&gt;</code></td><td>none</td><td><span class="badge s2">204</span> empty body</td></tr>
+          <tr><td>5</td><td><b>GET</b> <code>/games/&lt;id&gt;</code> again</td><td>none</td><td><span class="badge s4">404</span></td></tr>
+          <tr><td>6</td><td><b>POST</b> <code>/scores</code></td><td><code>{"gameTitle":"Stardew Valley","points":4200,"playerEmail":"postman@ift458.test"}</code></td><td><span class="badge s2">201</span> status <code>submitted</code></td></tr>
+          <tr><td>7</td><td><b>GET</b> <code>/scores</code></td><td>none</td><td><span class="badge s2">200</span></td></tr>
+          <tr><td>8</td><td><b>PATCH</b> <code>/scores/&lt;id&gt;</code></td><td><code>{"status":"verified"}</code></td><td><span class="badge s2">200</span></td></tr>
+          <tr><td>9</td><td><b>DELETE</b> <code>/scores/&lt;id&gt;</code></td><td>none</td><td><span class="badge s2">204</span></td></tr>
+        </tbody>
+      </table></div>
+      <p>All URLs start with <code>http://localhost:4001/api/v1</code>.</p>
+      <p><span class="badge s2">201 Created</span><span class="tag-real">real response</span> for request 6</p>
+      <pre class="block">{"status":"success","data":{"score":{"gameTitle":"Stardew Valley","platform":"pc","points":4200,"playerEmail":"postman@ift458.test","userId":null,"status":"submitted", …}}}</pre>
+      <div class="note warn"><p><b>Level 2 gap you just demonstrated:</b> you marked your own score <code>verified</code>, and you could edit or delete another user's game too. The API checks <b>who you are</b> (authentication) but not <b>what you may do</b> (authorization). Also note <code>userId: null</code>: the server trusts the <code>playerEmail</code> you typed instead of using your token.</p></div>
+      <button class="done-toggle" type="button" aria-pressed="false">Mark this section done</button>
+    </section>
+
+    <!-- 8 -->
+    <section class="step" id="collection" data-title="One-click run with the collection">
+      <h2><span class="num">STEP 8</span> Run everything in one click</h2>
+      <p class="lead">The file <code>postman-guide/IFT458-Level2.postman_collection.json</code> contains all 17 requests, with tests. <b>Log in</b> saves the token for you, so you never paste it.</p>
+      <ol class="steps">
+        <li>In Postman, click <b>Import</b> (or <b>File → Import</b>) and drop in <code>IFT458-Level2.postman_collection.json</code>.</li>
+        <li>Open the collection and look at its <b>Authorization</b> tab: Auth Type <b>Bearer Token</b>, Token <code>{{token}}</code>. Every request set to <b>Inherit auth from parent</b> uses it.</li>
+        <li>Open the <b>Variables</b> tab. <code>baseUrl</code> is <code>http://localhost:4001/api/v1</code>. Change it only if your API runs somewhere else.</li>
+        <li>Click the collection's <b>⋯</b> menu → <b>Run collection</b> (the Collection Runner), keep the order, and click <b>Run</b>.</li>
+      </ol>
+      <h3>How the token gets saved</h3>
+      <p>The <b>Log in</b> request has this script. It is in the <b>Scripts → Post-response</b> tab, called <b>Tests</b> in older Postman versions:</p>
+      <pre class="block"><span class="dim">// Saved WITHOUT the word Bearer: the collection's Bearer Token auth adds "Bearer " itself</span>
+const token = pm.response.json().token;
+pm.collectionVariables.set("token", token);</pre>
+      <p>This is Way 1 again: the variable holds only the token, and the Bearer Token auth adds <code>Bearer </code>. <b>Sign up</b> makes a new email on every run, so you can run the collection again without a 409.</p>
+      <p><b>Result of a real run</b> <span class="tag-real">real output</span>, from Newman, Postman's command-line runner, against this project's API:</p>
+      <pre class="block" id="newman"><span class="dim">❏ 1 Authentication</span>
+↳ Sign up                                   <span class="ok">201 ✓ Status is 201  ✓ No password in the response</span>
+↳ Log in (saves the token)                  <span class="ok">200 ✓ Status is 200  ✓ Token is 64 hex characters</span>
+↳ Log in with a wrong password (401)        <span class="ok">401 ✓ Status is 401  ✓ Same message as an unknown email</span>
+<span class="dim">❏ 2 Games</span>
+↳ List games WITHOUT a token (401)          <span class="ok">401 ✓</span>
+↳ List games                                <span class="ok">200 ✓ ✓</span>
+↳ Create a game (saves gameId)              <span class="ok">201 ✓</span>
+↳ Get the game                              <span class="ok">200 ✓</span>
+↳ Update the game                           <span class="ok">200 ✓ ✓</span>
+↳ Delete the game                           <span class="ok">204 ✓</span>
+↳ Get the deleted game (404)                <span class="ok">404 ✓</span>
+<span class="dim">❏ 3 Scores</span>
+↳ Submit a score (saves scoreId)            <span class="ok">201 ✓ ✓</span>
+↳ List scores                               <span class="ok">200 ✓</span>
+↳ Mark the score verified                   <span class="ok">200 ✓ ✓</span>
+↳ Delete the score                          <span class="ok">204 ✓</span>
+<span class="dim">❏ 4 Common mistakes with "Bearer"</span>
+↳ Mistake: "Bearer Bearer &lt;token&gt;" (401)     <span class="ok">401 ✓</span>
+↳ Mistake: token with no "Bearer" word (401) <span class="ok">401 ✓</span>
+↳ Correct: header typed by hand (200)        <span class="ok">200 ✓</span>
+
+requests 17 · failed 0 · assertions 24 · failed 0</pre>
+      <p>To run the same thing from a terminal, with the API running:</p>
+      <div class="cmd"><code>npx newman run postman-guide/IFT458-Level2.postman_collection.json</code><button class="copy" type="button">Copy</button></div>
+      <button class="done-toggle" type="button" aria-pressed="false">Mark this section done</button>
+    </section>
+
+    <!-- 9 -->
+    <section class="step" id="trouble" data-title="Troubleshooting">
+      <h2><span class="num">STEP 9</span> Troubleshooting</h2>
+      <details class="ex"><summary>401 "Authentication required" on games or scores</summary><div class="body">
+        <ol>
+          <li>Is Auth Type <b>Bearer Token</b> with only the token (Way 1), or a header <code>Bearer &lt;token&gt;</code> with Auth Type <b>No Auth</b> (Way 2)? Use the checker in Step 5.</li>
+          <li>Did you copy the quotes, a space, or only part of the token?</li>
+          <li>Is the token older than 24 hours, or from before <code>npm run seed</code> wiped the database? Log in again for a new one.</li>
+          <li>The API terminal prints a checklist under every 401. Read it.</li>
+        </ol>
+      </div></details>
+      <details class="ex"><summary>401 "Incorrect email or password." on login</summary><div class="body">
+        <p>The email or password is wrong. The message is the same for both, on purpose, so attackers cannot learn which emails exist. Seeded users use <code>password12345</code>.</p>
+      </div></details>
+      <details class="ex"><summary>"Could not send request" / ECONNREFUSED</summary><div class="body">
+        <p>The API is not running, or it is on a different port. Run <code>npm start</code> and check the <b>Ready</b> lines. In Postman on the web, select the <b>Desktop Agent</b>. The cloud agent cannot reach <code>localhost</code>.</p>
+      </div></details>
+      <details class="ex"><summary>400 on signup or create</summary><div class="body">
+        <p>Check the Body tab is <b>raw → JSON</b>, not Text, and that the field names match exactly: they are case sensitive. The response's <code>message</code> names the failing field.</p>
+      </div></details>
+      <details class="ex"><summary>409 on signup</summary><div class="body"><p>That email is already registered. Use a new one, or log in with it instead.</p></div></details>
+      <button class="done-toggle" type="button" aria-pressed="false">Mark this section done</button>
+    </section>
+  </main>
+</div>
+
+<script>
+const store = {
+  get(key, fallback) { try { const v = localStorage.getItem('l2postman:' + key); return v === null ? fallback : JSON.parse(v); } catch { return fallback; } },
+  set(key, value) { try { localStorage.setItem('l2postman:' + key, JSON.stringify(value)); } catch {} }
+};
+const $ = (s, root = document) => root.querySelector(s);
+const el = (tag, props = {}, ...kids) => { const n = Object.assign(document.createElement(tag), props); n.append(...kids.filter((k) => k != null)); return n; };
+
+// theme
+const savedTheme = store.get('theme', null);
+if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+$('#theme-toggle').addEventListener('click', () => {
+  const dark = document.documentElement.dataset.theme
+    ? document.documentElement.dataset.theme === 'dark'
+    : matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.dataset.theme = dark ? 'light' : 'dark';
+  store.set('theme', document.documentElement.dataset.theme);
+});
+
+// table of contents + progress
+const sections = [...document.querySelectorAll('section.step')];
+const done = new Set(store.get('done', []));
+const tocLinks = sections.map((s) => {
+  const a = el('a', { href: '#' + s.id, textContent: s.dataset.title });
+  $('#toc').append(el('li', {}, a));
+  return a;
+});
+function renderProgress() {
+  sections.forEach((s, i) => {
+    const on = done.has(s.id);
+    tocLinks[i].classList.toggle('done', on);
+    const btn = $('.done-toggle', s);
+    btn.setAttribute('aria-pressed', String(on));
+    btn.textContent = on ? '✓ Done' : 'Mark this section done';
+  });
+  $('#progress-text').textContent = `${done.size} of ${sections.length} sections done`;
+  $('#progress-bar').style.width = `${(done.size / sections.length) * 100}%`;
+}
+sections.forEach((s) => $('.done-toggle', s).addEventListener('click', () => {
+  done.has(s.id) ? done.delete(s.id) : done.add(s.id);
+  store.set('done', [...done]);
+  renderProgress();
+}));
+renderProgress();
+const spy = new IntersectionObserver((entries) => {
+  for (const e of entries) if (e.isIntersecting) tocLinks.forEach((a) => a.classList.toggle('active', a.hash === '#' + e.target.id));
+}, { rootMargin: '-30% 0px -60% 0px' });
+sections.forEach((s) => spy.observe(s));
+
+// copy buttons
+document.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.copy');
+  if (!btn) return;
+  try { await navigator.clipboard.writeText(btn.previousElementSibling.textContent); btn.textContent = 'Copied'; }
+  catch { btn.textContent = 'Select & copy'; }
+  setTimeout(() => (btn.textContent = 'Copy'), 1500);
+});
+
+// ---------- token checker ----------
+// Mirrors middleware/authenticate.js: /^Bearer ([a-f0-9]{64})$/i
+const SERVER_RULE = /^Bearer ([a-f0-9]{64})$/i;
+const SAMPLE = 'c716aba0df1b410ab3c69901fa045192cdaa82709a29a3a4670d4e4fb76d3e79';
+let way = '1';
+const input = $('#token-input');
+
+function check() {
+  const raw = input.value;
+  const out = $('#checker-result');
+  if (!raw) { out.replaceChildren(el('p', { className: 'hint', textContent: 'Paste a token, or try one of the example buttons.' })); return; }
+  // What Postman actually puts on the wire for each way
+  const header = way === '1' ? `Bearer ${raw.trim()}` : raw;
+  const problems = [];
+  const body = way === '1' ? raw.trim() : raw.replace(/^Bearer /i, '');
+  if (way === '1' && /^bearer\b/i.test(raw.trim())) problems.push('You typed "Bearer" in the Bearer Token box. Postman adds its own, so the server receives "Bearer Bearer …". Delete the word and keep only the token.');
+  if (way === '2' && !/^bearer\b/i.test(raw)) problems.push('In the Headers tab nothing is added for you. Start the value with the word Bearer and one space.');
+  if (way === '2' && /^bearer\b/i.test(raw) && !/^Bearer [^ ]/i.test(raw)) problems.push('Put exactly ONE space between "Bearer" and the token.');
+  if (way === '2' && /^\s|\s$/.test(raw)) problems.push('There is a space at the start or end of the value. Remove it.');
+  if (/["'“”]/.test(body)) problems.push('The token has quote marks. Copy only the characters between the quotes.');
+  const tokenPart = body.replace(/["'“”]/g, '').trim();
+  if (tokenPart && !/^bearer/i.test(tokenPart)) {
+    if (/[^a-f0-9]/i.test(tokenPart)) problems.push('The token should contain only 0–9 and a–f. Something else was copied along with it.');
+    else if (tokenPart.length !== 64) problems.push(`The token is ${tokenPart.length} characters long; it must be exactly 64. Part of it is missing or doubled.`);
+  }
+  const accepted = SERVER_RULE.test(header) && !problems.length;
+  out.replaceChildren(
+    el('div', { textContent: 'Postman sends this header:' }),
+    el('div', { className: 'sent', textContent: `Authorization: ${header}` }),
+    accepted
+      ? el('div', { className: 'verdict ok', textContent: '✓ The format is right. If this token is current, GET /games returns 200.' })
+      : el('div', { className: 'verdict bad' }, '✗ The server will answer 401.', el('ul', {}, ...(problems.length ? problems : ['The header does not match "Bearer" + one space + 64 hex characters.']).map((p) => el('li', { textContent: p }))))
+  );
+}
+document.querySelectorAll('[data-way]').forEach((b) => b.addEventListener('click', () => {
+  way = b.dataset.way;
+  document.querySelectorAll('[data-way]').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+  check();
+}));
+const EXAMPLES = {
+  good: () => (way === '1' ? SAMPLE : `Bearer ${SAMPLE}`),
+  double: () => `Bearer ${SAMPLE}`,
+  quotes: () => (way === '1' ? `"${SAMPLE}"` : `Bearer "${SAMPLE}"`),
+  short: () => (way === '1' ? SAMPLE.slice(0, 40) : `Bearer ${SAMPLE.slice(0, 40)}`)
+};
+document.querySelectorAll('[data-example]').forEach((b) => b.addEventListener('click', () => {
+  if (b.dataset.example === 'double') {
+    // this mistake only exists in the Bearer Token box
+    way = '1';
+    document.querySelectorAll('[data-way]').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.way === '1')));
+  }
+  input.value = EXAMPLES[b.dataset.example]();
+  check();
+}));
+input.addEventListener('input', check);
+check();
+</script>
+</body>
+</html>

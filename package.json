@@ -1,0 +1,30 @@
+{
+  "name": "ift458-level2-authentication",
+  "version": "1.0.0",
+  "description": "IFT 458 Project 2 - Level 2: Resource authentication (every game and score operation requires a login)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "client": "node client/server.js",
+    "guide": "node debugging-guide/build.js",
+    "seed": "node dev-data/seed.js --import",
+    "seed:delete": "node dev-data/seed.js --delete",
+    "test": "node --test --test-reporter=spec \"tests/**/*.test.js\""
+  },
+  "author": "IFT 458",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.1",
+    "express": "^5.2.1",
+    "mongoose": "^9.10.1",
+    "morgan": "^1.12.1",
+    "swagger-ui-express": "^5.0.1"
+  },
+  "devDependencies": {
+    "mongodb-memory-server": "^11.2.0",
+    "supertest": "^7.2.2"
+  }
+}

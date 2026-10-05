@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Game Score Tracker</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Game Score Tracker</h1>
+      <p class="api">API: <code id="api-base"></code></p>
+    </header>
+
+    <!-- Every message from the API lands here; aria-live reads it to screen readers -->
+    <p id="status" role="status" aria-live="polite"></p>
+
+    <section id="signed-out">
+      <form id="signup-form">
+        <h2>Sign up</h2>
+        <label>Name <input name="name" autocomplete="name" required></label>
+        <label>Email <input name="email" type="email" autocomplete="email" required></label>
+        <label>Password <input name="password" type="password" autocomplete="new-password" minlength="8" required></label>
+        <label>Confirm password <input name="passwordConfirmation" type="password" autocomplete="new-password" required></label>
+        <button type="submit">Create account</button>
+      </form>
+
+      <form id="login-form">
+        <h2>Log in</h2>
+        <label>Email <input name="email" type="email" autocomplete="username" required></label>
+        <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
+        <button type="submit">Log in</button>
+      </form>
+    </section>
+
+    <section id="signed-in" hidden>
+      <div class="bar">
+        <p>Signed in as <strong id="who"></strong>, token expires <span id="expires"></span></p>
+        <button id="logout" type="button" class="secondary">Log out</button>
+      </div>
+      <div class="bar">
+        <h2>Games</h2>
+        <button id="load-games" type="button">Load games</button>
+      </div>
+      <table>
+        <thead><tr><th>Title</th><th>Developer</th><th>Genre</th><th>Platform</th><th>Status</th></tr></thead>
+        <tbody id="games"></tbody>
+      </table>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

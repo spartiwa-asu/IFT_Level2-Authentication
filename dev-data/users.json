@@ -1,0 +1,5 @@
+[
+  { "name": "Course Admin", "email": "admin@ift458.test", "password": "password12345", "passwordConfirmation": "password12345" },
+  { "name": "David James", "email": "djames@ift458.test", "password": "password12345", "passwordConfirmation": "password12345" },
+  { "name": "Mary Smith", "email": "msmith@ift458.test", "password": "password12345", "passwordConfirmation": "password12345" }
+]

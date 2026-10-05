@@ -1,0 +1,37 @@
+[
+  {
+    "title": "Hollow Knight",
+    "developer": "Team Cherry",
+    "genre": "Metroidvania",
+    "description": "A hand-drawn adventure beneath a ruined kingdom of insects.",
+    "platform": "pc"
+  },
+  {
+    "title": "Celeste",
+    "developer": "Maddy Makes Games",
+    "genre": "Platformer",
+    "description": "A precision platformer about climbing a mountain, and anxiety.",
+    "platform": "console"
+  },
+  {
+    "title": "Stardew Valley",
+    "developer": "ConcernedApe",
+    "genre": "Simulation",
+    "description": "Inherit a farm, grow crops, befriend the town.",
+    "platform": "pc"
+  },
+  {
+    "title": "Vampire Survivors",
+    "developer": "poncle",
+    "genre": "Roguelite",
+    "description": "Survive waves of the night with an ever-growing arsenal.",
+    "platform": "mobile"
+  },
+  {
+    "title": "Tetris",
+    "developer": "Alexey Pajitnov",
+    "genre": "Puzzle",
+    "description": "The falling-block puzzle that started it all.",
+    "platform": "arcade"
+  }
+]

@@ -1,0 +1,74 @@
+# Level 2 — click "Send Request" above each block (VS Code REST Client extension).
+# Or open http://localhost:4001/api-docs and use Swagger UI.
+
+@host = http://localhost:4001/api/v1
+
+### Register a new user
+POST {{host}}/users/signup
+Content-Type: application/json
+
+{
+  "name": "Alice Johnson",
+  "email": "alice@ift458.test",
+  "password": "password12345",
+  "passwordConfirmation": "password12345"
+}
+
+### Log in — save the returned token for resource requests
+# @name login
+POST {{host}}/users/login
+Content-Type: application/json
+
+{
+  "email": "alice@ift458.test",
+  "password": "password12345"
+}
+
+### Wrong password — same message as an unknown email, on purpose
+POST {{host}}/users/login
+Content-Type: application/json
+
+{
+  "email": "alice@ift458.test",
+  "password": "not-the-password"
+}
+
+### NoSQL injection attempt — blocked by String(email)
+POST {{host}}/users/login
+Content-Type: application/json
+
+{
+  "email": { "$gt": "" },
+  "password": "password12345"
+}
+
+### List games (authentication required)
+GET {{host}}/games
+Authorization: Bearer {{login.response.body.$.token}}
+
+### Add a game (authentication required)
+POST {{host}}/games
+Authorization: Bearer {{login.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "title": "Hollow Knight",
+  "developer": "Team Cherry",
+  "genre": "Metroidvania",
+  "description": "A precision platformer about climbing a mountain.",
+  "platform": "console",
+  "submittedBy": "Course Admin"
+}
+
+### Edit a game. Paste an id from GET /games.
+PATCH {{host}}/games/PASTE_GAME_ID_HERE
+Authorization: Bearer {{login.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "title": "I changed your game and nobody stopped me"
+}
+
+### Delete a game
+DELETE {{host}}/games/PASTE_GAME_ID_HERE
+Authorization: Bearer {{login.response.body.$.token}}

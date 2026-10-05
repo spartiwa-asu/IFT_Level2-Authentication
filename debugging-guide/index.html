@@ -1,0 +1,710 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Level 2 Debugging Guide</title>
+<link rel="icon" href="data:,">
+<style>
+:root {
+  --bg: #f4f6fa;
+  --surface: #ffffff;
+  --surface-2: #eef2f7;
+  --text: #16202c;
+  --muted: #566476;
+  --border: #d3dbe6;
+  --accent: #174ea6;
+  --accent-soft: #e3ecfb;
+  --ok: #1e6b35;
+  --ok-soft: #e4f4e8;
+  --warn: #8a5a00;
+  --warn-soft: #fdf3dc;
+  --bad: #9b1c14;
+  --bad-soft: #fdeceb;
+  --code-bg: #1e2430;
+  --code-text: #dfe6ef;
+  --code-muted: #8391a5;
+  --code-hit: #3a2a2d;
+  --dot: #e5484d;
+  --radius: 10px;
+  --shadow: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 8%);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f141b; --surface: #171d26; --surface-2: #1e2531; --text: #e6ebf2; --muted: #9aa7b8;
+    --border: #2c3544; --accent: #7aa7ff; --accent-soft: #1d2a44; --ok: #6fd08c; --ok-soft: #16301f;
+    --warn: #f0c060; --warn-soft: #33290f; --bad: #ff8a80; --bad-soft: #3a1b1a; --code-bg: #0b0f15;
+    --code-hit: #3b2227; --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f141b; --surface: #171d26; --surface-2: #1e2531; --text: #e6ebf2; --muted: #9aa7b8;
+  --border: #2c3544; --accent: #7aa7ff; --accent-soft: #1d2a44; --ok: #6fd08c; --ok-soft: #16301f;
+  --warn: #f0c060; --warn-soft: #33290f; --bad: #ff8a80; --bad-soft: #3a1b1a; --code-bg: #0b0f15;
+  --code-hit: #3b2227; --shadow: none;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 16px; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+a { color: var(--accent); }
+code, kbd, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.9em; }
+:not(pre) > code { background: var(--surface-2); border: 1px solid var(--border); border-radius: 4px; padding: 1px 5px; overflow-wrap: anywhere; }
+kbd { display: inline-block; min-width: 1.8em; text-align: center; padding: 1px 6px; border: 1px solid var(--border); border-bottom-width: 3px; border-radius: 5px; background: var(--surface); font-weight: 600; }
+button { font: inherit; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); max-width: 1320px; margin: 0 auto; }
+nav.toc { position: sticky; top: 0; height: 100vh; overflow-y: auto; padding: 24px 12px 24px 20px; border-right: 1px solid var(--border); }
+nav.toc .brand { font-weight: 800; font-size: 15px; margin-bottom: 4px; }
+nav.toc .sub { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+nav.toc ol { list-style: none; margin: 0; padding: 0; counter-reset: toc; }
+nav.toc li a { display: flex; gap: 8px; align-items: center; padding: 6px 10px; border-radius: 6px; color: var(--text); text-decoration: none; font-size: 14px; }
+nav.toc li a::before { counter-increment: toc; content: counter(toc); flex: none; width: 20px; height: 20px; border-radius: 50%; background: var(--surface-2); color: var(--muted); font-size: 11px; font-weight: 700; display: grid; place-items: center; }
+nav.toc li a.done::before { content: "✓"; background: var(--ok-soft); color: var(--ok); }
+nav.toc li a.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.progress { margin: 16px 10px 0; font-size: 13px; color: var(--muted); }
+.bar { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; margin-top: 6px; }
+.bar > span { display: block; height: 100%; width: 0; background: var(--ok); transition: width .3s; }
+.theme-toggle { margin: 16px 10px 0; padding: 6px 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 6px; font-size: 13px; }
+
+main { padding: 32px 40px 80px; min-width: 0; }
+header.hero h1 { font-size: clamp(26px, 4vw, 36px); line-height: 1.2; margin: 0 0 8px; }
+header.hero p { color: var(--muted); max-width: 760px; margin: 0 0 20px; }
+.journeys { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-bottom: 8px; }
+.journey { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow); }
+.journey b { display: block; }
+.journey span { color: var(--muted); font-size: 14px; }
+
+section.step { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px 28px; margin-top: 24px; box-shadow: var(--shadow); }
+section.step > h2 { margin: 0 0 4px; font-size: 24px; display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+section.step > h2 .num { color: var(--accent); font-size: 15px; font-weight: 700; }
+section.step > .lead { color: var(--muted); margin: 0 0 16px; }
+h3 { font-size: 18px; margin: 24px 0 8px; }
+.done-toggle { display: inline-flex; align-items: center; gap: 8px; margin-top: 20px; padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font-weight: 600; }
+.done-toggle[aria-pressed="true"] { background: var(--ok-soft); border-color: transparent; color: var(--ok); }
+
+ol.steps { padding-left: 0; list-style: none; counter-reset: s; margin: 0; }
+ol.steps > li { counter-increment: s; position: relative; padding: 10px 0 10px 44px; border-bottom: 1px dashed var(--border); }
+ol.steps > li:last-child { border-bottom: 0; }
+ol.steps > li::before { content: counter(s); position: absolute; left: 0; top: 10px; width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; font-size: 14px; display: grid; place-items: center; }
+
+.cmd { display: flex; align-items: center; gap: 8px; margin: 6px 0; background: var(--code-bg); color: var(--code-text); border-radius: 6px; padding: 8px 8px 8px 12px; }
+.cmd code { flex: 1; background: none; border: 0; color: inherit; padding: 0; overflow-x: auto; white-space: pre; }
+.copy { flex: none; padding: 4px 10px; border-radius: 4px; border: 1px solid #3a4454; background: #2a3240; color: #dfe6ef; font-size: 12px; }
+
+.note { border-left: 4px solid var(--accent); background: var(--accent-soft); padding: 10px 14px; border-radius: 0 6px 6px 0; margin: 14px 0; }
+.note.warn { border-color: var(--warn); background: var(--warn-soft); }
+.note.bad { border-color: var(--bad); background: var(--bad-soft); }
+.note.ok { border-color: var(--ok); background: var(--ok-soft); }
+.note > :first-child { margin-top: 0; } .note > :last-child { margin-bottom: 0; }
+
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { color: var(--muted); font-size: 13px; text-transform: uppercase; letter-spacing: .03em; }
+.table-wrap { overflow-x: auto; }
+
+/* screenshot stepper */
+.shots { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 20px; }
+.shot-list { list-style: none; margin: 0; padding: 0; }
+.shot-list button { width: 100%; text-align: left; display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid transparent; border-radius: 8px; background: none; color: var(--text); }
+.shot-list button[aria-selected="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.shot-list .n { flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; font-size: 12px; font-weight: 700; }
+.shot-list button[aria-selected="true"] .n { background: var(--accent); color: #fff; }
+.shot-list small { display: block; color: var(--muted); }
+figure { margin: 0; }
+figure.shot img { display: block; width: 100%; height: auto; border: 1px solid var(--border); border-radius: 8px; background: #fff; cursor: zoom-in; }
+figure.shot .frame { max-height: 560px; overflow: auto; border-radius: 8px; }
+figcaption { color: var(--muted); font-size: 14px; margin-top: 8px; }
+.shot-nav { display: flex; gap: 8px; margin-top: 12px; }
+.btn { padding: 8px 14px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-weight: 600; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn:disabled { opacity: .45; cursor: default; }
+.badge { display: inline-block; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px; }
+.badge.s2 { background: var(--ok-soft); color: var(--ok); } .badge.s4 { background: var(--bad-soft); color: var(--bad); }
+.real { display: inline-block; font-size: 12px; color: var(--muted); border: 1px solid var(--border); border-radius: 999px; padding: 0 8px; margin-left: 6px; }
+
+/* breakpoint explorer */
+.filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.chip { padding: 5px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 14px; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.explorer { display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 16px; }
+.bp-list { list-style: none; margin: 0; padding: 0; max-height: 640px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; }
+.bp-list button { width: 100%; text-align: left; display: flex; gap: 10px; align-items: center; padding: 8px 10px; border: 0; border-bottom: 1px solid var(--border); background: none; color: var(--text); font-size: 14px; }
+.bp-list li:last-child button { border-bottom: 0; }
+.bp-list button[aria-selected="true"] { background: var(--accent-soft); }
+.bp-list .id { flex: none; min-width: 34px; height: 24px; padding: 0 6px; border-radius: 12px; background: var(--dot); color: #fff; font-weight: 700; font-size: 12px; display: grid; place-items: center; }
+.bp-list .seen .id { background: var(--ok); }
+.bp-detail h3 { margin: 0 0 4px; }
+.where { color: var(--muted); font-size: 14px; margin-bottom: 12px; }
+.fields { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 12px 0; }
+.fields dt { font-weight: 700; font-size: 14px; color: var(--muted); }
+.fields dd { margin: 0; }
+.fields dd.plain { grid-column: 1 / -1; color: var(--muted); font-size: 14px; }
+.code { background: var(--code-bg); color: var(--code-text); border-radius: 8px; padding: 10px 0; overflow-x: auto; font-size: 13px; line-height: 1.55; }
+.code .ln { display: grid; grid-template-columns: 22px 44px 1fr; white-space: pre; }
+.code .ln .gutter { display: grid; place-items: center; }
+.code .ln .no { color: var(--code-muted); text-align: right; padding-right: 12px; user-select: none; }
+.code .ln.cm .txt { color: #8fb89a; }
+.code .ln.hit { background: var(--code-hit); }
+.code .ln.hit .gutter::before { content: ""; width: 11px; height: 11px; border-radius: 50%; background: var(--dot); }
+.code-label { font-size: 13px; color: var(--muted); margin: 14px 0 6px; }
+
+/* journey animation */
+.chain { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; }
+.chain .node { padding: 8px 12px; border-radius: 8px; border: 2px solid var(--border); background: var(--surface-2); font-size: 14px; min-width: 120px; }
+.chain .node b { display: block; font-size: 13px; }
+.chain .node small { color: var(--muted); }
+.chain .node.on { border-color: var(--dot); background: var(--bad-soft); }
+.chain .node.past { border-color: var(--ok); background: var(--ok-soft); }
+.chain .arrow { color: var(--muted); }
+.chain-text { min-height: 3.2em; }
+
+pre.log { background: var(--code-bg); color: var(--code-text); border-radius: 8px; padding: 14px; overflow-x: auto; font-size: 13px; line-height: 1.5; }
+pre.log .ok { color: #7ee2a0; } pre.log .bad { color: #ff9b94; } pre.log .dim { color: var(--code-muted); } pre.log .req { color: #9cc3ff; }
+
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+
+details.ex { border: 1px solid var(--border); border-radius: 8px; margin: 10px 0; background: var(--surface); }
+details.ex > summary { padding: 12px 14px; cursor: pointer; font-weight: 600; list-style: none; display: flex; gap: 10px; }
+details.ex > summary::-webkit-details-marker { display: none; }
+details.ex > summary::before { content: "▸"; color: var(--muted); }
+details.ex[open] > summary::before { content: "▾"; }
+details.ex .body { padding: 0 14px 14px 36px; }
+details.ex textarea { width: 100%; min-height: 80px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font: 14px/1.5 ui-monospace, Menlo, monospace; }
+.hint { color: var(--muted); font-size: 14px; }
+.saved { color: var(--ok); font-size: 13px; margin-left: 8px; }
+
+dialog.lightbox { border: 0; padding: 0; max-width: 96vw; max-height: 94vh; background: transparent; }
+dialog.lightbox::backdrop { background: rgb(0 0 0 / 75%); }
+dialog.lightbox img { display: block; max-width: 96vw; max-height: 90vh; border-radius: 6px; background: #fff; }
+dialog.lightbox button { position: fixed; top: 12px; right: 16px; padding: 6px 12px; border-radius: 6px; border: 0; background: #fff; color: #111; font-weight: 700; }
+
+@media (max-width: 960px) {
+  .layout { grid-template-columns: 1fr; }
+  nav.toc { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--border); padding: 16px; }
+  nav.toc ol { display: flex; flex-wrap: wrap; gap: 4px; }
+  main { padding: 20px 16px 60px; }
+  section.step { padding: 18px 16px; }
+  /* minmax(0, …) lets long code lines scroll inside their box instead of widening the page */
+  .shots, .explorer { grid-template-columns: minmax(0, 1fr); }
+  .bp-list { max-height: 260px; }
+}
+</style>
+</head>
+<body>
+<div class="layout">
+  <nav class="toc" aria-label="Guide sections">
+    <div class="brand">IFT 458 · Level 2</div>
+    <div class="sub">Follow a password and a token through the code</div>
+    <ol id="toc"></ol>
+    <div class="progress"><span id="progress-text">0 of 0 sections done</span><div class="bar"><span id="progress-bar"></span></div></div>
+    <button class="theme-toggle" id="theme-toggle" type="button">Toggle dark mode</button>
+  </nav>
+
+  <main>
+    <header class="hero">
+      <h1>Debugging Level 2 in VS Code</h1>
+      <p>You will pause the running API at numbered breakpoints and watch, line by line, how a password becomes a hash and how a token is born, checked and trusted. Work through the sections in order and mark each one done. Every screenshot on this page is a real screenshot of this project.</p>
+      <div class="journeys">
+        <div class="journey"><b>Journey 1 · Signup</b><span>Plain password → salted bcrypt hash (breakpoints 1–5)</span></div>
+        <div class="journey"><b>Journey 2 · Login</b><span>Password check → a token is born (breakpoints 6–11)</span></div>
+        <div class="journey"><b>Journey 3 · Using the token</b><span>The middleware proves this server issued it (breakpoints 12–16)</span></div>
+        <div class="journey"><b>JWT lab</b><span>Build and verify a JWT by hand, for comparison (J1–J6)</span></div>
+      </div>
+    </header>
+
+    <!-- 1 -->
+    <section class="step" id="setup" data-title="Setup (once)">
+      <h2><span class="num">STEP 1</span> Setup (once)</h2>
+      <p class="lead">Get the API running under the VS Code debugger.</p>
+      <ol class="steps">
+        <li>Open the project folder itself in VS Code (<b>File → Open Folder…</b>), not its parent. <code>.vscode/launch.json</code> must be at the top of the Explorer.</li>
+        <li>Install the packages, and load sample data if your instructor asks for it:
+          <div class="cmd"><code>npm install</code><button class="copy" type="button">Copy</button></div>
+          <div class="cmd"><code>npm run seed</code><button class="copy" type="button">Copy</button></div>
+          Seeded users log in with the password <code>password12345</code>.</li>
+        <li>Stop any <code>npm start</code> that is already running. Port 4001 can only be used by one program at a time.</li>
+        <li>Open <b>Run and Debug</b> (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd>, or <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd> on a Mac), choose <b>Debug API server</b>, and press <kbd>F5</kbd>. Wait for <code>DB connection successful</code> in the terminal.</li>
+        <li>Open <a href="http://localhost:4001/api-docs" target="_blank" rel="noopener">http://localhost:4001/api-docs</a>.</li>
+      </ol>
+      <button class="done-toggle" type="button" aria-pressed="false">Mark this section done</button>
+    </section>
+
+    <!-- 2 -->
+    <section class="step" id="swagger" data-title="Watch it work in Swagger">
+      <h2><span class="num">STEP 2</span> Watch it work in Swagger</h2>
+      <p class="lead">Before setting any breakpoints, send each request once so you know what "working" looks like. Click through the seven screens in order.</p>
+      <div class="shots">
+        <ul class="shot-list" id="shot-list" role="tablist" aria-label="Swagger screens"></ul>
+        <div>
+          <figure class="shot"><div class="frame"><img id="shot-img" alt=""></div><figcaption id="shot-cap"></figcaption></figure>
+          <div class="shot-nav"><button class="btn" id="shot-prev" type="button">← Previous</button><button class="btn primary" id="shot-next" type="button">Next →</button></div>
+        </div>
+      </div>
+      <div class="note warn"><p><b>Every reload clears Authorize.</b> This Swagger forgets your token when the page reloads, so the next student on a shared computer cannot reuse it. After a reload, log in again and click <b>Authorize</b> again, or every games and scores request returns 401.</p></div>
+      <p class="hint">The tokens in these screenshots came from a throwaway test database that no longer exists, so they cannot be used. Your own token is different every time you log in. Treat it like a password and cover it in screenshots.</p>
+      <button class="done-toggle" type="button" aria-pressed="false">Mark this section done</button>
+    </section>
+
+    <!-- 3 -->
+    <section class="step" id="how" data-title="How to set a breakpoint">
+      <h2><span class="num">STEP 3</span> How to set a breakpoint</h2>
+      <p class="lead">Every breakpoint is marked in the code with a comment that starts <code>● BREAKPOINT</code>.</p>
+      <ol class="steps">
+        <li>Search the whole project for <code>● BREAKPOINT</code> (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd>, or <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd>). Each comment block says what to do.</li>
+        <li>Click in the gutter <b>just left of the line number</b> of the line the explorer in Step 4 marks with a red dot. A red dot appears in VS Code too.</li>
+        <li>Send the request named in <b>Trigger</b> from Swagger. VS Code jumps to the front and highlights the paused line.</li>
+      </ol>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Key</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>F5</kbd></td><td>Continue to the next breakpoint</td></tr>
+          <tr><td><kbd>F10</kbd></td><td>Step over: run this line and stop on the next one</td></tr>
+          <tr><td><kbd>F11</kbd></td><td>Step into: follow a function call into its file</td></tr>
+          <tr><td><kbd>Shift</kbd>+<kbd>F5</kbd></td><td>Stop debugging</td></tr>
+        </tbody>
+      </table></div>
+      <p>While paused: the <b>VARIABLES</b> panel shows local values, hovering over a variable shows its value, and the <b>DEBUG CONSOLE</b> runs any expression inside the paused code. The explorer below lists the expressions to try.</p>
+      <div class="note"><p><b>Route breakpoints (R1–R5) go on <code>next();</code>.</b> A line such as <code>router.use((req, res, next) =&gt; {</code> runs once, when the server starts, to build the route table. The <code>next();</code> inside it runs on every request, so that is where the red dot goes.</p></div>
+      <button class="done-toggle" type="button" aria-pressed="false">Mark this section done</button>
+    </section>
+
+    <!-- 4 -->
+    <section class="step" id="explorer" data-title="Breakpoint explorer">
+      <h2><span class="num">STEP 4</span> Breakpoint explorer</h2>
+      <p class="lead">The code below is copied from this project's files, with the real line numbers. The red dot marks the line to click. Breakpoints you open turn green in the list.</p>
+      <div class="filters" id="filters" role="group" aria-label="Filter breakpoints"></div>
+      <div class="explorer">
+        <ul class="bp-list" id="bp-list" role="listbox" aria-label="Breakpoints"></ul>
+        <div class="bp-detail" id="bp-detail" aria-live="polite"></div>
+      </div>
+      <button class="done-toggle" type="button" aria-pressed="false">Mark this section done</button>
+    </section>
+
+    <!-- 5 -->
+    <section class="step" id="order" data-title="Follow one request">
+      <h2><span class="num">STEP 5</span> Follow one request through the chain</h2>
+      <p class="lead">For <code>GET /games/{id}</code>, set every breakpoint below, send the request once, and press <kbd>F5</kbd> at each stop. The request always visits them in this order, because <code>app.js</code> mounts <code>authenticate</code> before the games router. Click <b>Next stop</b> to walk through it here first.</p>
+      <div class="chain" id="chain"></div>
+      <p class="chain-text" id="chain-text"></p>
+      <div class="shot-nav"><button class="btn" id="chain-reset" type="button">Start over</button><button class="btn primary" id="chain-next" type="button">Next stop →</button></div>
+      <p class="hint">In VS Code, the <b>CALL STACK</b> panel shows Express handing the request from one function to the next.</p>
+      <button class="done-toggle" type="button" aria-pressed="false">Mark this section done</button>
+    </section>
+
+    <!-- 6 -->
+    <section class="step" id="token" data-title="Salt and the life of a token">
+      <h2><span class="num">STEP 6</span> Salt, cost and the life of a token</h2>
+      <div class="grid2">
+        <div>
+          <h3>Salt and cost</h3>
+          <ul>
+            <li>The <b>salt</b> is 22 random characters made for <i>every</i> password (breakpoint 3). It is stored inside the hash, it is not secret, and it is <b>not</b> in <code>.env</code>.</li>
+            <li><code>BCRYPT_ROUNDS</code> in <code>.env</code> is the <b>cost</b>: <code>12</code> means 2<sup>12</sup> rounds. It is stored in the hash too (<code>$2b$12$…</code>).</li>
+            <li>One secret added to every password is called a <b>pepper</b>. This project does not use one.</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Life of the token</h3>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Stage</th><th>What happens</th><th>Stop</th></tr></thead>
+            <tbody>
+              <tr><td>Birth</td><td>Login makes a random token and stores only its SHA-256 and <code>expiresAt</code></td><td>9–11</td></tr>
+              <tr><td>Use</td><td>Every request re-hashes the token and finds the session</td><td>12–15</td></tr>
+              <tr><td>Expiry</td><td><code>expiresAt</code> has passed, so the middleware returns 401 at once</td><td>14</td></tr>
+              <tr><td>Cleanup</td><td>MongoDB's TTL index deletes the expired session, about once a minute</td><td>—</td></tr>
+              <tr><td>Early logout</td><td><b>Not possible in this build.</b> There is no logout endpoint.</td><td>—</td></tr>
+            </tbody>
+          </table></div>
+        </div>
+      </div>
+      <div class="note"><p><b>Watch a token die:</b> set <code>TOKEN_LIFETIME_MINUTES=1</code> in <code>.env</code>, restart the debugger, log in, wait a minute, call <b>GET /games</b> again, and stop at breakpoint 14. <code>session</code> is <code>null</code>.</p></div>
+      <button class="done-toggle" type="button" aria-pressed="false">Mark this section done</button>
+    </section>
+
+    <!-- 7 -->
+    <section class="step" id="client" data-title="Browser client and DevTools">
+      <h2><span class="num">STEP 7</span> The browser client and developer tools</h2>
+      <p class="lead">The same API, used from a separate web page. Run the API and the client in two terminals:</p>
+      <div class="cmd"><code>npm start</code><button class="copy" type="button">Copy</button></div>
+      <div class="cmd"><code>npm run client</code><button class="copy" type="button">Copy</button></div>
+      <p>Then open <a href="http://localhost:5173" target="_blank" rel="noopener">http://localhost:5173</a>.</p>
+      <div class="grid2">
+        <figure class="shot"><img src="img/client-signed-out.png" alt="Browser client with the Sign up and Log in forms side by side" loading="lazy"><figcaption>Signed out: sign up once, then log in.</figcaption></figure>
+        <figure class="shot"><img src="img/client-games.png" alt="Browser client signed in, showing a table of five games" loading="lazy"><figcaption>Logged in and <b>Load games</b> clicked: the page sent <code>Authorization: Bearer &lt;token&gt;</code>.</figcaption></figure>
+      </div>
+
+      <h3>See your token in the developer tools</h3>
+      <p>Open DevTools with <kbd>F12</kbd> (<kbd>Cmd</kbd>+<kbd>Option</kbd>+<kbd>I</kbd> on a Mac).</p>
+      <div class="grid2">
+        <div>
+          <p><b>1. Network tab</b> (Swagger and the client)</p>
+          <ol>
+            <li>Open <b>Network</b> <i>before</i> you log in, and filter by <b>Fetch/XHR</b>.</li>
+            <li>Log in. Click the <code>login</code> request and open <b>Response</b>: you see <code>"token": "…64 hex characters…"</code>.</li>
+            <li>Load games. Click the <code>games</code> request and open <b>Headers → Request Headers</b>: you see <code>Authorization: Bearer &lt;token&gt;</code>.</li>
+          </ol>
+          <p class="hint">You may also see an <code>OPTIONS</code> request first. That is the CORS preflight. The browser sends one before a cross-origin request with a JSON body or an <code>Authorization</code> header, and remembers the answer for 10 minutes. Swagger never shows one, because it is on the same origin as the API.</p>
+        </div>
+        <div>
+          <p><b>2. Console tab</b> (browser client only)</p>
+          <p>Type:</p>
+          <div class="cmd"><code>session</code><button class="copy" type="button">Copy</button></div>
+          <p>After you log in it shows <code>{ token, expiresAt, user }</code>. Reload the page and type it again: it shows <code>null</code>. The token lived only in memory.</p>
+          <p><b>Where you will NOT find it:</b> <b>Application → Local Storage</b> and <b>Session Storage</b>. Nothing is saved to disk for another script, or the next user of a shared computer, to pick up.</p>
+        </div>
+      </div>
+      <div class="note warn"><p>Anyone who copies the token from the Network tab can use it until it expires, even after you click <b>Log out</b>, because Level 2 has no logout endpoint.</p></div>
+
+      <h3>When the page says "Could not reach…"</h3>
+      <figure class="shot"><img src="img/client-cors-error.png" alt="Browser client showing a red message: Log in failed, could not reach the API, check CORS_ORIGINS" loading="lazy"><figcaption>The page opened at <code>http://127.0.0.1:5173</code>, an origin that is not in <code>CORS_ORIGINS</code>.</figcaption></figure>
+      <p>The browser console (F12) then shows the real reason:</p>
+      <pre class="log"><span class="bad">Access to fetch at 'http://127.0.0.1:4001/api/v1/users/login' from origin 'http://127.0.0.1:5173'
+has been blocked by CORS policy: Response to preflight request doesn't pass access control check:
+No 'Access-Control-Allow-Origin' header is present on the requested resource.</span></pre>
+      <p><b>Fix:</b> add the page's origin to <code>CORS_ORIGINS</code> in <code>.env</code>, then restart the API:</p>
+      <div class="cmd"><code>CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173</code><button class="copy" type="button">Copy</button></div>
+      <button class="done-toggle" type="button" aria-pressed="false">Mark this section done</button>
+    </section>
+
+    <!-- 8 -->
+    <section class="step" id="log" data-title="Read the terminal log">
+      <h2><span class="num">STEP 8</span> Read the terminal log</h2>
+      <p class="lead">Every request is written to the terminal and to <code>logs/</code>. A failure comes with a numbered checklist of what to check. This is a real excerpt: a signup, a login, a wrong password, then <code>GET /games</code> with no token.</p>
+      <pre class="log"><span class="req">  → POST /api/v1/users/signup  [authController.signup]  from ::1 (localhost)</span>
+<span class="dim">    · payload {"body":{"name":"Postman Student","email":"postman@ift458.test","password":"***","passwordConfirmation":"***"}}</span>
+<span class="ok">  ✓ 201 Created in 203.8ms</span>
+<span class="req">  → POST /api/v1/users/login  [authController.login]  from ::1 (localhost)</span>
+<span class="dim">    · payload {"body":{"email":"postman@ift458.test","password":"***"}}</span>
+<span class="ok">  ✓ 200 OK in 193.5ms</span>
+<span class="req">  → POST /api/v1/users/login  [authController.login]  from ::1 (localhost)</span>
+<span class="dim">    · payload {"body":{"email":"postman@ift458.test","password":"***"}}</span>
+<span class="ok">  ✓ CLO DEMONSTRATED  L1-CLO4  Reject invalid credentials without revealing which part was wrong</span>
+<span class="bad">  ✗ 401 Unauthorized in 192.7ms  (POST /api/v1/users/login)</span>
+  What to check, in order:
+    1. The email or password did not match.
+    2. Login gives the SAME message for an unknown email and a wrong password, on purpose.
+    3. Seeded users log in with password12345 (run npm run seed first).
+<span class="req">  → GET /api/v1/games  [(no controller)]  from ::1 (localhost)</span>
+<span class="bad">  ✗ 401 Unauthorized in 0.1ms  (GET /api/v1/games)</span>
+  What to check, in order:
+    1. No valid bearer token came with this request (games and scores need one).
+    2. Swagger: POST /users/login, copy the token, click Authorize, paste ONLY the 64-character token (Swagger adds "Bearer ").
+    3. Reloading the Swagger page clears Authorize on purpose - authorize again after every reload.</pre>
+      <ul>
+        <li><b>Passwords never appear.</b> The logger replaces them with <code>***</code>.</li>
+        <li><b><code>[(no controller)]</code></b> means the request was stopped before any controller ran. Here, <code>authenticate</code> turned it away.</li>
+        <li><b>Stopping the server:</b> press <kbd>Ctrl</kbd>+<kbd>C</kbd>. The server writes the course-outcome summary and a checksum to the log, then exits.</li>
+      </ul>
+      <button class="done-toggle" type="button" aria-pressed="false">Mark this section done</button>
+    </section>
+
+    <!-- 9 -->
+    <section class="step" id="jwt" data-title="JWT lab">
+      <h2><span class="num">STEP 9</span> JWT lab</h2>
+      <p class="lead">The API uses opaque tokens, not JWTs. <code>labs/jwt-walkthrough.js</code> builds a JWT by hand so you can compare the two.</p>
+      <ol class="steps">
+        <li>Add a secret to <code>.env</code> if you have not already:
+          <div class="cmd"><code>node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"</code><button class="copy" type="button">Copy</button></div>
+          Paste the output after <code>JWT_SECRET=</code>.</li>
+        <li>In <b>Run and Debug</b>, choose <b>Debug JWT lab</b> and press <kbd>F5</kbd>.</li>
+        <li>Breakpoints <b>J1–J6</b> show the header, the claims, the HMAC-SHA256 signature and the verification. Open them in the explorer with the <b>JWT lab</b> filter.</li>
+        <li>The lab then tampers with the payload, uses a wrong secret and waits for expiry. Each one is rejected.</li>
+      </ol>
+      <div class="note bad"><p>Never paste <code>JWT_SECRET</code> or a real application token into a website.</p></div>
+      <button class="done-toggle" type="button" aria-pressed="false">Mark this section done</button>
+    </section>
+
+    <!-- 10 -->
+    <section class="step" id="exercises" data-title="Exercises">
+      <h2><span class="num">STEP 10</span> Exercises</h2>
+      <p class="lead">Answer each with a <b>file</b>, a <b>line</b> and a <b>value</b>. Your answers are saved in this browser only, so copy them into your report before you close it.</p>
+      <div id="exercise-list"></div>
+      <button class="done-toggle" type="button" aria-pressed="false">Mark this section done</button>
+    </section>
+
+    <!-- 11 -->
+    <section class="step" id="trouble" data-title="Troubleshooting">
+      <h2><span class="num">STEP 11</span> Troubleshooting</h2>
+      <details class="ex"><summary>Swagger says 401 "Authentication required" on games or scores</summary><div class="body">
+        <p>No valid token came with the request. The usual cause is a Swagger reload, which clears Authorize on purpose. Log in again, click <b>Authorize</b>, and paste <b>only</b> the 64-character token. Swagger adds <code>Bearer </code> itself, so pasting <code>Bearer abc…</code> sends <code>Bearer Bearer abc…</code>, which is also a 401.</p>
+        <figure class="shot"><img src="img/swagger-games-401.png" alt="Swagger GET /games response with code 401 and the message Authentication required" loading="lazy"></figure>
+      </div></details>
+      <details class="ex"><summary>CORS error when opening Swagger by IP address</summary><div class="body">
+        <p>An <i>origin</i> is scheme + host + port, so <code>http://localhost:4001</code> and <code>http://192.168.1.5:4001</code> are different origins. Swagger's server address is the relative path <code>/api/v1</code>, so it always calls the host that served the page. If you still see the error, restart the server and reload. The <b>Servers</b> dropdown should show <code>/api/v1 - This server</code>.</p>
+        <figure class="shot"><img src="img/swagger-overview.png" alt="Swagger UI with the Servers dropdown showing /api/v1 - This server, and the Authorize button" loading="lazy"></figure>
+      </div></details>
+      <details class="ex"><summary>The browser client says "Could not reach…"</summary><div class="body">
+        <p>Either <code>npm start</code> is not running, or the page's origin is missing from <code>CORS_ORIGINS</code> in <code>.env</code>. Check the console (F12) for the exact reason, fix <code>.env</code>, and restart the API. See Step 7.</p>
+      </div></details>
+      <details class="ex"><summary>Port 4001 is already in use</summary><div class="body">
+        <p>Another copy of the server is still running, often an <code>npm start</code> in another terminal. Stop it with <kbd>Ctrl</kbd>+<kbd>C</kbd>, or stop debugging with <kbd>Shift</kbd>+<kbd>F5</kbd>, then start again.</p>
+      </div></details>
+      <details class="ex"><summary>A breakpoint never stops</summary><div class="body">
+        <ul>
+          <li>Did you start the server with <b>Debug API server</b> (<kbd>F5</kbd>)? <code>npm start</code> does not stop at breakpoints.</li>
+          <li>Is the dot on the line the explorer marks? A route breakpoint on the <code>router.use(…)</code> line only fires at startup.</li>
+          <li>A hollow grey dot means VS Code could not bind it. Save the file, then restart debugging.</li>
+          <li>For breakpoints 12–16, did you click <b>Authorize</b> first? Without a token the request stops at 12 and never reaches 14.</li>
+        </ul>
+      </div></details>
+      <button class="done-toggle" type="button" aria-pressed="false">Mark this section done</button>
+    </section>
+  </main>
+</div>
+
+<dialog class="lightbox" id="lightbox"><button type="button" id="lightbox-close">Close ✕</button><img id="lightbox-img" alt=""></dialog>
+
+<!-- Refreshed by: npm run guide (debugging-guide/build.js) -->
+<script id="bp-data" type="application/json">[{"id":"1","inside":false,"title":"SIGNUP: the request reaches the controller","file":"controllers/authController.js","target":33,"fields":[{"label":"Trigger","text":"Swagger -> POST /users/signup -> Try it out -> Execute"},{"label":"Inspect","text":"req.body.password  - still the plain text the user typed."},{"label":"Why","text":"the route (routes/userRoutes.js) sent POST /signup here; nothing has protected the password yet."},{"label":"Next","text":"F5 (Continue) - the debugger stops in models/userModel.js (BREAKPOINT 2)."},{"label":"","text":"Destructure only the fields we expect - nothing else from the body reaches the DB"}],"code":[{"n":26,"text":"  // ● BREAKPOINT 1 of 16 - SIGNUP: the request reaches the controller"},{"n":27,"text":"  //   Trigger:  Swagger -> POST /users/signup -> Try it out -> Execute"},{"n":28,"text":"  //   Inspect:  req.body.password  - still the plain text the user typed."},{"n":29,"text":"  //   Why:      the route (routes/userRoutes.js) sent POST /signup here; nothing"},{"n":30,"text":"  //             has protected the password yet."},{"n":31,"text":"  //   Next:     F5 (Continue) - the debugger stops in models/userModel.js (BREAKPOINT 2)."},{"n":32,"text":"  // Destructure only the fields we expect - nothing else from the body reaches the DB"},{"n":33,"text":"  const { name, email, password, passwordConfirmation } = req.body || {};"},{"n":34,"text":"  const user = await User.create({ name, email, password, passwordConfirmation });"},{"n":35,"text":""},{"n":36,"text":"  // ● BREAKPOINT 5 of 16 - SIGNUP: the user is saved, build the response"}]},{"id":"5","inside":false,"title":"SIGNUP: the user is saved, build the response","file":"controllers/authController.js","target":41,"fields":[{"label":"Inspect","text":"user.password  - now a 60-character bcrypt hash, not the plain text. publicUser(user) - type it in the DEBUG CONSOLE: no password field."},{"label":"Why","text":"the JSON response is this API's \"View\"; it must never echo secrets. Signup does not log you in - no token is created here."}],"code":[{"n":36,"text":"  // ● BREAKPOINT 5 of 16 - SIGNUP: the user is saved, build the response"},{"n":37,"text":"  //   Inspect:  user.password  - now a 60-character bcrypt hash, not the plain text."},{"n":38,"text":"  //             publicUser(user) - type it in the DEBUG CONSOLE: no password field."},{"n":39,"text":"  //   Why:      the JSON response is this API's \"View\"; it must never echo secrets."},{"n":40,"text":"  //             Signup does not log you in - no token is created here."},{"n":41,"text":"  res.status(201).json({ status: 'success', data: { user: publicUser(user) } });"},{"n":42,"text":"};"},{"n":43,"text":""},{"n":44,"text":"// POST /api/v1/users/login"}]},{"id":"6","inside":false,"title":"LOGIN: the credentials arrive","file":"controllers/authController.js","target":49,"fields":[{"label":"Trigger","text":"Swagger -> POST /users/login with the email + password you signed up with"},{"label":"Inspect","text":"req.body.email, req.body.password (plain text, sent once, over HTTPS in real life)"}],"code":[{"n":46,"text":"  // ● BREAKPOINT 6 of 16 - LOGIN: the credentials arrive"},{"n":47,"text":"  //   Trigger:  Swagger -> POST /users/login with the email + password you signed up with"},{"n":48,"text":"  //   Inspect:  req.body.email, req.body.password (plain text, sent once, over HTTPS in real life)"},{"n":49,"text":"  const { email, password } = req.body || {};"},{"n":50,"text":""},{"n":51,"text":"  // 1) Both fields present? (the `return` stops Express from trying to respond twice)"},{"n":52,"text":"  if (!email || !password) {"}]},{"id":"7","inside":false,"title":"LOGIN: load the user AND the stored hash","file":"controllers/authController.js","target":62,"fields":[{"label":"","text":"Step over (F10) this line, then inspect:  user.password"},{"label":"Why","text":"the schema hides password (select: false); .select('+password') asks for it explicitly because we need the hash to compare against."},{"label":"Try","text":"log in with an unknown email - user is null."},{"label":"","text":"2) Find the user. String() stops someone sending {\"$gt\": \"\"} as the email (NoSQL injection)."}],"code":[{"n":56,"text":"  // ● BREAKPOINT 7 of 16 - LOGIN: load the user AND the stored hash"},{"n":57,"text":"  //   Step over (F10) this line, then inspect:  user.password"},{"n":58,"text":"  //   Why:      the schema hides password (select: false); .select('+password') asks"},{"n":59,"text":"  //             for it explicitly because we need the hash to compare against."},{"n":60,"text":"  //   Try:      log in with an unknown email - user is null."},{"n":61,"text":"  // 2) Find the user. String() stops someone sending {\"$gt\": \"\"} as the email (NoSQL injection)."},{"n":62,"text":"  const user = await User.findOne({ email: String(email).toLowerCase() }).select('+password');"},{"n":63,"text":""},{"n":64,"text":"  // ● BREAKPOINT 8 of 16 - LOGIN: validate the password"},{"n":65,"text":"  //   Step into (F11) isPasswordMatch to land in models/userModel.js, or just step over (F10)."}]},{"id":"8","inside":false,"title":"LOGIN: validate the password","file":"controllers/authController.js","target":69,"fields":[{"label":"","text":"Step into (F11) isPasswordMatch to land in models/userModel.js, or just step over (F10)."},{"label":"Try","text":"a wrong password - you reach the 401 below. Note the message is identical for \"no such user\" and \"wrong password\"."},{"label":"","text":"3) Same message for \"no such user\" and \"wrong password\" - don't reveal which emails exist"}],"code":[{"n":64,"text":"  // ● BREAKPOINT 8 of 16 - LOGIN: validate the password"},{"n":65,"text":"  //   Step into (F11) isPasswordMatch to land in models/userModel.js, or just step over (F10)."},{"n":66,"text":"  //   Try:      a wrong password - you reach the 401 below. Note the message is identical"},{"n":67,"text":"  //             for \"no such user\" and \"wrong password\"."},{"n":68,"text":"  // 3) Same message for \"no such user\" and \"wrong password\" - don't reveal which emails exist"},{"n":69,"text":"  if (!user || !(await user.isPasswordMatch(String(password)))) {"},{"n":70,"text":"    return res.status(401).json({ status: 'fail', message: 'Incorrect email or password.' });"},{"n":71,"text":"  }"},{"n":72,"text":""}]},{"id":"9","inside":false,"title":"LOGIN: the token is born","file":"controllers/authController.js","target":80,"fields":[{"label":"Step over (F10), then inspect","text":"token  - 64 hex characters (32 random bytes)."},{"label":"Why","text":"it is OPAQUE: random, meaningless, not a JWT. It contains no email, id or expiry. The only way to know who it belongs to is the database record created below. (Compare with labs/jwt-walkthrough.js, where the token carries its own claims and a signature.)"}],"code":[{"n":74,"text":"  // ● BREAKPOINT 9 of 16 - LOGIN: the token is born"},{"n":75,"text":"  //   Step over (F10), then inspect:  token  - 64 hex characters (32 random bytes)."},{"n":76,"text":"  //   Why:      it is OPAQUE: random, meaningless, not a JWT. It contains no email, id"},{"n":77,"text":"  //             or expiry. The only way to know who it belongs to is the database record"},{"n":78,"text":"  //             created below. (Compare with labs/jwt-walkthrough.js, where the token"},{"n":79,"text":"  //             carries its own claims and a signature.)"},{"n":80,"text":"  const token = randomBytes(32).toString('hex');"},{"n":81,"text":""},{"n":82,"text":"  // ● BREAKPOINT 10 of 16 - LOGIN: the token's lifetime is decided"},{"n":83,"text":"  //   Inspect:  expiresAt, TOKEN_LIFETIME_MINUTES (from .env, default 1440 = 24 h)"}]},{"id":"10","inside":false,"title":"LOGIN: the token's lifetime is decided","file":"controllers/authController.js","target":85,"fields":[{"label":"Inspect","text":"expiresAt, TOKEN_LIFETIME_MINUTES (from .env, default 1440 = 24 h)"},{"label":"Why","text":"the server, not the client, decides when the token dies."}],"code":[{"n":82,"text":"  // ● BREAKPOINT 10 of 16 - LOGIN: the token's lifetime is decided"},{"n":83,"text":"  //   Inspect:  expiresAt, TOKEN_LIFETIME_MINUTES (from .env, default 1440 = 24 h)"},{"n":84,"text":"  //   Why:      the server, not the client, decides when the token dies."},{"n":85,"text":"  const expiresAt = new Date(Date.now() + TOKEN_LIFETIME_MINUTES * 60 * 1000);"},{"n":86,"text":""},{"n":87,"text":"  // ● BREAKPOINT 11 of 16 - LOGIN: remember that WE issued this token"},{"n":88,"text":"  //   In the DEBUG CONSOLE type:  createHash('sha256').update(token).digest('hex')"}]},{"id":"11","inside":false,"title":"LOGIN: remember that WE issued this token","file":"controllers/authController.js","target":93,"fields":[{"label":"In the DEBUG CONSOLE type","text":"createHash('sha256').update(token).digest('hex')"},{"label":"Why","text":"only this SHA-256 digest is stored. Someone who can read the sessions collection cannot use a digest as a token. This record is the server's proof, later, that it created the token (BREAKPOINT 14)."},{"label":"Check","text":"in Atlas/Compass, the sessions document has tokenHash - never the token."}],"code":[{"n":87,"text":"  // ● BREAKPOINT 11 of 16 - LOGIN: remember that WE issued this token"},{"n":88,"text":"  //   In the DEBUG CONSOLE type:  createHash('sha256').update(token).digest('hex')"},{"n":89,"text":"  //   Why:      only this SHA-256 digest is stored. Someone who can read the sessions"},{"n":90,"text":"  //             collection cannot use a digest as a token. This record is the server's"},{"n":91,"text":"  //             proof, later, that it created the token (BREAKPOINT 14)."},{"n":92,"text":"  //   Check:    in Atlas/Compass, the sessions document has tokenHash - never the token."},{"n":93,"text":"  await Session.create({"},{"n":94,"text":"    tokenHash: createHash('sha256').update(token).digest('hex'),"},{"n":95,"text":"    user: user._id,"},{"n":96,"text":"    expiresAt"}]},{"id":"2","inside":false,"title":"SIGNUP: the model is about to protect the password","file":"models/userModel.js","target":62,"fields":[{"label":"Inspect","text":"this.password  - still plain text (validation has already passed). this.isModified('password') - true for a new user."},{"label":"Why","text":"a Mongoose \"pre save\" hook runs automatically before every save, so no controller can forget to hash."}],"code":[{"n":57,"text":"  // ● BREAKPOINT 2 of 16 - SIGNUP: the model is about to protect the password"},{"n":58,"text":"  //   Inspect:  this.password  - still plain text (validation has already passed)."},{"n":59,"text":"  //             this.isModified('password') - true for a new user."},{"n":60,"text":"  //   Why:      a Mongoose \"pre save\" hook runs automatically before every save,"},{"n":61,"text":"  //             so no controller can forget to hash."},{"n":62,"text":"  if (!this.isModified('password')) return;"},{"n":63,"text":""},{"n":64,"text":"  // ● BREAKPOINT 3 of 16 - SIGNUP: generate the SALT"},{"n":65,"text":"  //   Step over (F10), then inspect:  salt   e.g. $2b$12$YbMg6f5k7xWd1sYQAHC7kO"}]},{"id":"3","inside":false,"title":"SIGNUP: generate the SALT","file":"models/userModel.js","target":75,"fields":[{"label":"Step over (F10), then inspect","text":"salt   e.g. $2b$12$YbMg6f5k7xWd1sYQAHC7kO $2b$   = bcrypt version 12$    = cost, from BCRYPT_ROUNDS in .env the last 22 characters = random bytes, new for EVERY password"},{"label":"Why","text":"the salt makes identical passwords hash differently, so an attacker cannot use one precomputed table (or spot users who share a password)."},{"label":"Try","text":"sign up two users with the SAME password and compare their salts."},{"label":"","text":"Note:     the salt is not a secret and is not in .env - it is stored inside the hash (see BREAKPOINT 4). A secret shared by all passwords would be a \"pepper\", which this project does not use."}],"code":[{"n":64,"text":"  // ● BREAKPOINT 3 of 16 - SIGNUP: generate the SALT"},{"n":65,"text":"  //   Step over (F10), then inspect:  salt   e.g. $2b$12$YbMg6f5k7xWd1sYQAHC7kO"},{"n":66,"text":"  //     $2b$   = bcrypt version"},{"n":67,"text":"  //     12$    = cost, from BCRYPT_ROUNDS in .env"},{"n":68,"text":"  //     the last 22 characters = random bytes, new for EVERY password"},{"n":69,"text":"  //   Why:      the salt makes identical passwords hash differently, so an attacker"},{"n":70,"text":"  //             cannot use one precomputed table (or spot users who share a password)."},{"n":71,"text":"  //   Try:      sign up two users with the SAME password and compare their salts."},{"n":72,"text":"  //   Note:     the salt is not a secret and is not in .env - it is stored inside the"},{"n":73,"text":"  //             hash (see BREAKPOINT 4). A secret shared by all passwords would be a"},{"n":74,"text":"  //             \"pepper\", which this project does not use."},{"n":75,"text":"  const salt = await bcrypt.genSalt(BCRYPT_ROUNDS);"},{"n":76,"text":""},{"n":77,"text":"  // ● BREAKPOINT 4 of 16 - SIGNUP: hash password + salt"},{"n":78,"text":"  //   Step over (F10), then inspect:  this.password  - 60 characters."}]},{"id":"4","inside":false,"title":"SIGNUP: hash password + salt","file":"models/userModel.js","target":82,"fields":[{"label":"Step over (F10), then inspect","text":"this.password  - 60 characters."},{"label":"In the DEBUG CONSOLE type","text":"this.password.startsWith(salt)   -> true"},{"label":"Why","text":"the first 29 characters of the hash ARE the salt; the last 31 are the hash itself. That is how login can re-use the salt (BREAKPOINT 8)."}],"code":[{"n":77,"text":"  // ● BREAKPOINT 4 of 16 - SIGNUP: hash password + salt"},{"n":78,"text":"  //   Step over (F10), then inspect:  this.password  - 60 characters."},{"n":79,"text":"  //   In the DEBUG CONSOLE type:  this.password.startsWith(salt)   -> true"},{"n":80,"text":"  //   Why:      the first 29 characters of the hash ARE the salt; the last 31 are the"},{"n":81,"text":"  //             hash itself. That is how login can re-use the salt (BREAKPOINT 8)."},{"n":82,"text":"  this.password = await bcrypt.hash(this.password, salt);"},{"n":83,"text":"  this.passwordConfirmation = undefined;"},{"n":84,"text":"});"},{"n":85,"text":""}]},{"id":"8","inside":true,"title":"LOGIN: how the password is validated","file":"models/userModel.js","target":95,"fields":[{"label":"Inspect","text":"candidatePassword (plain text typed at login), this.password (stored hash)"},{"label":"In the DEBUG CONSOLE type","text":"bcrypt.getSalt(this.password) - the SAME salt that was generated at signup (BREAKPOINT 3)."},{"label":"Why","text":"bcrypt.compare hashes candidatePassword with that salt and cost, then compares the result with the stored hash. The password is never decrypted: a hash is one-way, it cannot be reversed."}],"code":[{"n":88,"text":"  // ● BREAKPOINT 8 of 16 (inside) - LOGIN: how the password is validated"},{"n":89,"text":"  //   Inspect:  candidatePassword (plain text typed at login), this.password (stored hash)"},{"n":90,"text":"  //   In the DEBUG CONSOLE type:  bcrypt.getSalt(this.password)"},{"n":91,"text":"  //             - the SAME salt that was generated at signup (BREAKPOINT 3)."},{"n":92,"text":"  //   Why:      bcrypt.compare hashes candidatePassword with that salt and cost, then"},{"n":93,"text":"  //             compares the result with the stored hash. The password is never decrypted:"},{"n":94,"text":"  //             a hash is one-way, it cannot be reversed."},{"n":95,"text":"  return bcrypt.compare(candidatePassword, this.password);"},{"n":96,"text":"};"},{"n":97,"text":""},{"n":98,"text":"module.exports = mongoose.model('User', userSchema);"}]},{"id":"12","inside":false,"title":"MIDDLEWARE: read the token from the request","file":"middleware/authenticate.js","target":20,"fields":[{"label":"Step over (F10), then inspect","text":"req.get('authorization')  and  match"},{"label":"Why","text":"the token must arrive as the header  Authorization: Bearer <64 hex>. Tokens in the URL or body are ignored (URLs end up in logs and history). match[1] is the token itself; match is null if the header is missing or malformed - try GET /games without clicking Authorize."}],"code":[{"n":14,"text":"  // ● BREAKPOINT 12 of 16 - MIDDLEWARE: read the token from the request"},{"n":15,"text":"  //   Step over (F10), then inspect:  req.get('authorization')  and  match"},{"n":16,"text":"  //   Why:      the token must arrive as the header  Authorization: Bearer <64 hex>."},{"n":17,"text":"  //             Tokens in the URL or body are ignored (URLs end up in logs and history)."},{"n":18,"text":"  //             match[1] is the token itself; match is null if the header is missing"},{"n":19,"text":"  //             or malformed - try GET /games without clicking Authorize."},{"n":20,"text":"  const match = /^Bearer ([a-f0-9]{64})$/i.exec(req.get('authorization') || '');"},{"n":21,"text":"  const deny = () => res.set('WWW-Authenticate', 'Bearer').status(401).json({"},{"n":22,"text":"    status: 'fail', message: 'Authentication required. Log in and provide a valid bearer token.'"},{"n":23,"text":"  });"}]},{"id":"13","inside":false,"title":"MIDDLEWARE: hash the token we were given","file":"middleware/authenticate.js","target":30,"fields":[{"label":"Step over (F10), then inspect","text":"tokenHash"},{"label":"Why","text":"the database only holds the SHA-256 of each token (BREAKPOINT 11), so we hash what the client sent and look for the same digest."}],"code":[{"n":26,"text":"  // ● BREAKPOINT 13 of 16 - MIDDLEWARE: hash the token we were given"},{"n":27,"text":"  //   Step over (F10), then inspect:  tokenHash"},{"n":28,"text":"  //   Why:      the database only holds the SHA-256 of each token (BREAKPOINT 11), so we"},{"n":29,"text":"  //             hash what the client sent and look for the same digest."},{"n":30,"text":"  const tokenHash = createHash('sha256').update(match[1]).digest('hex');"},{"n":31,"text":""},{"n":32,"text":"  // ---- LIFE OF THE TOKEN, stage 2: EVERY USE --------------------------------"},{"n":33,"text":"  // ● BREAKPOINT 14 of 16 - MIDDLEWARE: did WE issue this token, and is it still alive?"}]},{"id":"14","inside":false,"title":"MIDDLEWARE: did WE issue this token, and is it still alive?","file":"middleware/authenticate.js","target":42,"fields":[{"label":"Step over (F10), then inspect","text":"session  (a document, or null)"},{"label":"Why","text":"a matching record proves this server created the token at login - an invented token has no record. expiresAt > now rejects an expired token right away. (Mongo's TTL index deletes old records too, but only about once a minute, so we never rely on it for security.)"},{"label":"Try","text":"set TOKEN_LIFETIME_MINUTES=1 in .env, restart, log in, wait a minute, call GET /games again - session is null and you get 401."},{"label":"","text":"Check expiry explicitly; MongoDB TTL cleanup is asynchronous."}],"code":[{"n":33,"text":"  // ● BREAKPOINT 14 of 16 - MIDDLEWARE: did WE issue this token, and is it still alive?"},{"n":34,"text":"  //   Step over (F10), then inspect:  session  (a document, or null)"},{"n":35,"text":"  //   Why:      a matching record proves this server created the token at login - an"},{"n":36,"text":"  //             invented token has no record. expiresAt > now rejects an expired token"},{"n":37,"text":"  //             right away. (Mongo's TTL index deletes old records too, but only about"},{"n":38,"text":"  //             once a minute, so we never rely on it for security.)"},{"n":39,"text":"  //   Try:      set TOKEN_LIFETIME_MINUTES=1 in .env, restart, log in, wait a minute,"},{"n":40,"text":"  //             call GET /games again - session is null and you get 401."},{"n":41,"text":"  // Check expiry explicitly; MongoDB TTL cleanup is asynchronous."},{"n":42,"text":"  const session = await Session.findOne({ tokenHash, expiresAt: { $gt: new Date() } });"},{"n":43,"text":"  if (!session) return deny();"},{"n":44,"text":""},{"n":45,"text":"  // ● BREAKPOINT 15 of 16 - MIDDLEWARE: attach the user, then hand over to the route"}]},{"id":"15","inside":false,"title":"MIDDLEWARE: attach the user, then hand over to the route","file":"middleware/authenticate.js","target":51,"fields":[{"label":"Step over (F10), then inspect","text":"user"},{"label":"Why","text":"a valid token for a deleted account must not work, so we load the user. req.user is how the controller finds out who is calling. next() passes control to the next function in the chain - the game/score controller."},{"label":"Next","text":"F11 on next() or F5 - you land in controllers/gameController.js (BREAKPOINT 16)."}],"code":[{"n":45,"text":"  // ● BREAKPOINT 15 of 16 - MIDDLEWARE: attach the user, then hand over to the route"},{"n":46,"text":"  //   Step over (F10), then inspect:  user"},{"n":47,"text":"  //   Why:      a valid token for a deleted account must not work, so we load the user."},{"n":48,"text":"  //             req.user is how the controller finds out who is calling. next() passes"},{"n":49,"text":"  //             control to the next function in the chain - the game/score controller."},{"n":50,"text":"  //   Next:     F11 on next() or F5 - you land in controllers/gameController.js (BREAKPOINT 16)."},{"n":51,"text":"  const user = await User.findById(session.user);"},{"n":52,"text":"  if (!user) return deny();"},{"n":53,"text":"  req.user = user;"},{"n":54,"text":"  next();"}]},{"id":"16","inside":false,"title":"CONTROLLER: authenticated, now do the work","file":"controllers/gameController.js","target":16,"fields":[{"label":"Trigger","text":"GET /games with a valid token (after BREAKPOINTS 12-15)"},{"label":"Inspect","text":"req.user.email  - set by middleware/authenticate.js; the controller never sees the token, only WHO is calling."},{"label":"","text":"AUTHENTICATION vs AUTHORIZATION: authentication answered \"who are you?\". Nobody"},{"label":"","text":"asks \"are you ALLOWED to?\" - see updateGame/deleteGame below: any logged-in user"},{"label":"","text":"can change or delete any game. An authorization check (owner or role) would go"},{"label":"","text":"at the top of those handlers, using req.user."}],"code":[{"n":8,"text":"  // ● BREAKPOINT 16 of 16 - CONTROLLER: authenticated, now do the work"},{"n":9,"text":"  //   Trigger:  GET /games with a valid token (after BREAKPOINTS 12-15)"},{"n":10,"text":"  //   Inspect:  req.user.email  - set by middleware/authenticate.js; the controller"},{"n":11,"text":"  //             never sees the token, only WHO is calling."},{"n":12,"text":"  //   AUTHENTICATION vs AUTHORIZATION: authentication answered \"who are you?\". Nobody"},{"n":13,"text":"  //   asks \"are you ALLOWED to?\" - see updateGame/deleteGame below: any logged-in user"},{"n":14,"text":"  //   can change or delete any game. An authorization check (owner or role) would go"},{"n":15,"text":"  //   at the top of those handlers, using req.user."},{"n":16,"text":"  const games = await Game.find().sort('-createdAt');"},{"n":17,"text":"  res.status(200).json({ status: 'success', results: games.length, data: { games } });"},{"n":18,"text":"};"},{"n":19,"text":""}]},{"id":"G1","inside":false,"title":"CONTROLLER: read ONE game","file":"controllers/gameController.js","target":28,"fields":[{"label":"Trigger","text":"GET /games/{id} - copy an _id from the GET /games response"},{"label":"Step over (F10), then inspect","text":"game  (a document, or null)"},{"label":"Try","text":"a valid-looking id that does not exist, e.g. 66f0c2a4e1b2c3d4e5f60718 - game is null and you take the 404 branch. \"abc\" never gets this far: findById throws, and the error handler answers 400 (see BREAKPOINT R3)."}],"code":[{"n":22,"text":"  // ● BREAKPOINT G1 - CONTROLLER: read ONE game"},{"n":23,"text":"  //   Trigger:  GET /games/{id} - copy an _id from the GET /games response"},{"n":24,"text":"  //   Step over (F10), then inspect:  game  (a document, or null)"},{"n":25,"text":"  //   Try:      a valid-looking id that does not exist, e.g. 66f0c2a4e1b2c3d4e5f60718 -"},{"n":26,"text":"  //             game is null and you take the 404 branch. \"abc\" never gets this far:"},{"n":27,"text":"  //             findById throws, and the error handler answers 400 (see BREAKPOINT R3)."},{"n":28,"text":"  const game = await Game.findById(req.params.id);"},{"n":29,"text":"  if (!game) return res.status(404).json({ status: 'fail', message: 'Game not found.' });"},{"n":30,"text":"  res.status(200).json({ status: 'success', data: { game } });"},{"n":31,"text":"};"}]},{"id":"G2","inside":false,"title":"CONTROLLER: create a game","file":"controllers/gameController.js","target":41,"fields":[{"label":"Trigger","text":"POST /games - add an extra field to the body, e.g. \"_id\": \"123\" or \"isAdmin\": true"},{"label":"Inspect","text":"req.body  compared with  pick(req.body, GAME_FIELDS)  (type it in the DEBUG CONSOLE)"},{"label":"Why","text":"pick() keeps only the allow-listed fields, so the client cannot set fields you never meant to accept (mass assignment). F11 to step into utils/pick.js."},{"label":"Try","text":"leave out \"title\" - Game.create throws a ValidationError and you get 400."}],"code":[{"n":35,"text":"  // ● BREAKPOINT G2 - CONTROLLER: create a game"},{"n":36,"text":"  //   Trigger:  POST /games - add an extra field to the body, e.g. \"_id\": \"123\" or \"isAdmin\": true"},{"n":37,"text":"  //   Inspect:  req.body  compared with  pick(req.body, GAME_FIELDS)  (type it in the DEBUG CONSOLE)"},{"n":38,"text":"  //   Why:      pick() keeps only the allow-listed fields, so the client cannot set fields"},{"n":39,"text":"  //             you never meant to accept (mass assignment). F11 to step into utils/pick.js."},{"n":40,"text":"  //   Try:      leave out \"title\" - Game.create throws a ValidationError and you get 400."},{"n":41,"text":"  const game = await Game.create(pick(req.body, GAME_FIELDS));"},{"n":42,"text":"  res.status(201).json({ status: 'success', data: { game } });"},{"n":43,"text":"};"},{"n":44,"text":""}]},{"id":"G3","inside":false,"title":"CONTROLLER: update a game (authenticated, NOT authorized)","file":"controllers/gameController.js","target":54,"fields":[{"label":"Trigger","text":"PATCH /games/{id} logged in as a DIFFERENT user than the one who created it"},{"label":"Inspect","text":"req.user.email  and  game.submittedBy  after F10 - they need not match."},{"label":"Why","text":"authenticate proved WHO you are; nothing here checks whether you may edit THIS game. runValidators: true re-checks the schema on update (Mongoose skips validation on updates by default)."},{"label":"Try","text":"\"platform\": \"toaster\" - the enum validator rejects it with 400."}],"code":[{"n":47,"text":"  // ● BREAKPOINT G3 - CONTROLLER: update a game (authenticated, NOT authorized)"},{"n":48,"text":"  //   Trigger:  PATCH /games/{id} logged in as a DIFFERENT user than the one who created it"},{"n":49,"text":"  //   Inspect:  req.user.email  and  game.submittedBy  after F10 - they need not match."},{"n":50,"text":"  //   Why:      authenticate proved WHO you are; nothing here checks whether you may"},{"n":51,"text":"  //             edit THIS game. runValidators: true re-checks the schema on update"},{"n":52,"text":"  //             (Mongoose skips validation on updates by default)."},{"n":53,"text":"  //   Try:      \"platform\": \"toaster\" - the enum validator rejects it with 400."},{"n":54,"text":"  const game = await Game.findByIdAndUpdate(req.params.id, pick(req.body, GAME_FIELDS), {"},{"n":55,"text":"    returnDocument: 'after', // return the updated document, not the old one"},{"n":56,"text":"    runValidators: true"},{"n":57,"text":"  });"}]},{"id":"G4","inside":false,"title":"CONTROLLER: delete a game (authenticated, NOT authorized)","file":"controllers/gameController.js","target":69,"fields":[{"label":"Trigger","text":"DELETE /games/{id}"},{"label":"Inspect","text":"game  after F10 - the document that was just removed"},{"label":"Why","text":"204 means \"success, no body\", so send() has nothing to send. Run the same DELETE again: game is now null and you get 404."}],"code":[{"n":64,"text":"  // ● BREAKPOINT G4 - CONTROLLER: delete a game (authenticated, NOT authorized)"},{"n":65,"text":"  //   Trigger:  DELETE /games/{id}"},{"n":66,"text":"  //   Inspect:  game  after F10 - the document that was just removed"},{"n":67,"text":"  //   Why:      204 means \"success, no body\", so send() has nothing to send. Run the same"},{"n":68,"text":"  //             DELETE again: game is now null and you get 404."},{"n":69,"text":"  const game = await Game.findByIdAndDelete(req.params.id);"},{"n":70,"text":"  if (!game) return res.status(404).json({ status: 'fail', message: 'Game not found.' });"},{"n":71,"text":"  res.status(204).send();"},{"n":72,"text":"};"}]},{"id":"S1","inside":false,"title":"CONTROLLER: list scores for the leaderboard","file":"controllers/scoreController.js","target":13,"fields":[{"label":"Trigger","text":"GET /scores"},{"label":"Inspect","text":"req.user.email (who asked)  and  scores  after F10"},{"label":"Why","text":"sort('-points') means highest first; the minus sign means descending. Every logged-in user sees every score - no filtering by req.user."}],"code":[{"n":8,"text":"  // ● BREAKPOINT S1 - CONTROLLER: list scores for the leaderboard"},{"n":9,"text":"  //   Trigger:  GET /scores"},{"n":10,"text":"  //   Inspect:  req.user.email (who asked)  and  scores  after F10"},{"n":11,"text":"  //   Why:      sort('-points') means highest first; the minus sign means descending."},{"n":12,"text":"  //             Every logged-in user sees every score - no filtering by req.user."},{"n":13,"text":"  const scores = await Score.find().sort('-points');"},{"n":14,"text":"  res.status(200).json({ status: 'success', results: scores.length, data: { scores } });"},{"n":15,"text":"};"},{"n":16,"text":""}]},{"id":"S2","inside":false,"title":"CONTROLLER: read ONE score","file":"controllers/scoreController.js","target":22,"fields":[{"label":"Trigger","text":"GET /scores/{id} - copy an _id from the GET /scores response"},{"label":"Inspect","text":"req.params.id (filled by the route, BREAKPOINT R5)  and  score  after F10"}],"code":[{"n":19,"text":"  // ● BREAKPOINT S2 - CONTROLLER: read ONE score"},{"n":20,"text":"  //   Trigger:  GET /scores/{id} - copy an _id from the GET /scores response"},{"n":21,"text":"  //   Inspect:  req.params.id (filled by the route, BREAKPOINT R5)  and  score  after F10"},{"n":22,"text":"  const score = await Score.findById(req.params.id);"},{"n":23,"text":"  if (!score) return res.status(404).json({ status: 'fail', message: 'Score not found.' });"},{"n":24,"text":"  res.status(200).json({ status: 'success', data: { score } });"},{"n":25,"text":"};"}]},{"id":"S3","inside":false,"title":"CONTROLLER: submit a score as ANYONE","file":"controllers/scoreController.js","target":35,"fields":[{"label":"Trigger","text":"POST /scores with \"playerEmail\" set to someone else's email"},{"label":"Inspect","text":"req.user.email  compared with  req.body.playerEmail"},{"label":"Why","text":"the server KNOWS who is calling (req.user), but it trusts the email typed in the body instead. userId stays null because it is not in SCORE_FIELDS. Fix idea: take playerEmail and userId from req.user, never from req.body."}],"code":[{"n":29,"text":"  // ● BREAKPOINT S3 - CONTROLLER: submit a score as ANYONE"},{"n":30,"text":"  //   Trigger:  POST /scores with \"playerEmail\" set to someone else's email"},{"n":31,"text":"  //   Inspect:  req.user.email  compared with  req.body.playerEmail"},{"n":32,"text":"  //   Why:      the server KNOWS who is calling (req.user), but it trusts the email typed"},{"n":33,"text":"  //             in the body instead. userId stays null because it is not in SCORE_FIELDS."},{"n":34,"text":"  //             Fix idea: take playerEmail and userId from req.user, never from req.body."},{"n":35,"text":"  const score = await Score.create(pick(req.body, SCORE_FIELDS));"},{"n":36,"text":"  res.status(201).json({ status: 'success', data: { score } });"},{"n":37,"text":"};"},{"n":38,"text":""}]},{"id":"S4","inside":false,"title":"CONTROLLER: change any score, e.g. mark it verified","file":"controllers/scoreController.js","target":47,"fields":[{"label":"Trigger","text":"PATCH /scores/{id} with { \"status\": \"verified\", \"points\": 99999999 }"},{"label":"Inspect","text":"pick(req.body, SCORE_FIELDS)  in the DEBUG CONSOLE, then score after F10"},{"label":"Why","text":"any logged-in player can verify their own score or inflate someone else's. Verifying should need a moderator role - that is AUTHORIZATION."},{"label":"Try","text":"\"points\": 12.5 - runValidators rejects it (whole numbers only) with 400."}],"code":[{"n":41,"text":"  // ● BREAKPOINT S4 - CONTROLLER: change any score, e.g. mark it verified"},{"n":42,"text":"  //   Trigger:  PATCH /scores/{id} with { \"status\": \"verified\", \"points\": 99999999 }"},{"n":43,"text":"  //   Inspect:  pick(req.body, SCORE_FIELDS)  in the DEBUG CONSOLE, then score after F10"},{"n":44,"text":"  //   Why:      any logged-in player can verify their own score or inflate someone else's."},{"n":45,"text":"  //             Verifying should need a moderator role - that is AUTHORIZATION."},{"n":46,"text":"  //   Try:      \"points\": 12.5 - runValidators rejects it (whole numbers only) with 400."},{"n":47,"text":"  const score = await Score.findByIdAndUpdate(req.params.id, pick(req.body, SCORE_FIELDS), {"},{"n":48,"text":"    returnDocument: 'after',"},{"n":49,"text":"    runValidators: true"},{"n":50,"text":"  });"}]},{"id":"S5","inside":false,"title":"CONTROLLER: delete any score","file":"controllers/scoreController.js","target":60,"fields":[{"label":"Trigger","text":"DELETE /scores/{id} for a score you did not submit"},{"label":"Inspect","text":"req.user.email  and  score.playerEmail  after F10 - no check compares them."}],"code":[{"n":57,"text":"  // ● BREAKPOINT S5 - CONTROLLER: delete any score"},{"n":58,"text":"  //   Trigger:  DELETE /scores/{id} for a score you did not submit"},{"n":59,"text":"  //   Inspect:  req.user.email  and  score.playerEmail  after F10 - no check compares them."},{"n":60,"text":"  const score = await Score.findByIdAndDelete(req.params.id);"},{"n":61,"text":"  if (!score) return res.status(404).json({ status: 'fail', message: 'Score not found.' });"},{"n":62,"text":"  res.status(204).send();"},{"n":63,"text":"};"}]},{"id":"R1","inside":false,"title":"ROUTE: the users router matched the URL","file":"routes/userRoutes.js","target":14,"fields":[{"label":"Trigger","text":"Swagger -> POST /users/signup or POST /users/login"},{"label":"Inspect","text":"req.method, req.originalUrl, req.baseUrl, req.path"},{"label":"Why","text":"app.js mounted this router at /api/v1/users and stripped that prefix, so req.path is just '/signup' or '/login' - that is what the lines below match. No token is checked here: app.js mounts this router BEFORE authenticate."},{"label":"Next","text":"F5 - you land in controllers/authController.js (BREAKPOINT 1 or 6)."}],"code":[{"n":6,"text":"// ● BREAKPOINT R1 - ROUTE: the users router matched the URL"},{"n":7,"text":"//   Trigger:  Swagger -> POST /users/signup or POST /users/login"},{"n":8,"text":"//   Inspect:  req.method, req.originalUrl, req.baseUrl, req.path"},{"n":9,"text":"//   Why:      app.js mounted this router at /api/v1/users and stripped that prefix, so"},{"n":10,"text":"//             req.path is just '/signup' or '/login' - that is what the lines below match."},{"n":11,"text":"//             No token is checked here: app.js mounts this router BEFORE authenticate."},{"n":12,"text":"//   Next:     F5 - you land in controllers/authController.js (BREAKPOINT 1 or 6)."},{"n":13,"text":"router.use((req, res, next) => {"},{"n":14,"text":"  next();"},{"n":15,"text":"});"},{"n":16,"text":""},{"n":17,"text":"// These router.post() lines run ONCE, at startup, to build the route table. A breakpoint"}]},{"id":"R2","inside":false,"title":"ROUTE: the games router matched the URL","file":"routes/gameRoutes.js","target":13,"fields":[{"label":"Trigger","text":"any /games request in Swagger, after clicking Authorize"},{"label":"Inspect","text":"req.method, req.baseUrl, req.path, req.user.email"},{"label":"Why","text":"req.user is already set - middleware/authenticate.js ran BEFORE this router (BREAKPOINTS 12-15). Without a valid token you never reach this line."},{"label":"Next","text":"F5 - the method + path decide which controller runs (BREAKPOINT 16 or G1-G4)."}],"code":[{"n":6,"text":"// ● BREAKPOINT R2 - ROUTE: the games router matched the URL"},{"n":7,"text":"//   Trigger:  any /games request in Swagger, after clicking Authorize"},{"n":8,"text":"//   Inspect:  req.method, req.baseUrl, req.path, req.user.email"},{"n":9,"text":"//   Why:      req.user is already set - middleware/authenticate.js ran BEFORE this router"},{"n":10,"text":"//             (BREAKPOINTS 12-15). Without a valid token you never reach this line."},{"n":11,"text":"//   Next:     F5 - the method + path decide which controller runs (BREAKPOINT 16 or G1-G4)."},{"n":12,"text":"router.use((req, res, next) => {"},{"n":13,"text":"  next();"},{"n":14,"text":"});"},{"n":15,"text":""},{"n":16,"text":"// ● BREAKPOINT R3 - ROUTE: Express pulled :id out of the URL"}]},{"id":"R3","inside":false,"title":"ROUTE: Express pulled :id out of the URL","file":"routes/gameRoutes.js","target":24,"fields":[{"label":"Trigger","text":"GET, PATCH or DELETE /games/{id}"},{"label":"Inspect","text":"id  and  req.params.id  - the same string"},{"label":"Why","text":"router.param runs once for every route below that has :id in its path, before the controller. It is the natural place to check an id."},{"label":"Try","text":"send the id \"abc\". The controller's findById throws a CastError, and middleware/errorHandler.js turns it into a 400."}],"code":[{"n":16,"text":"// ● BREAKPOINT R3 - ROUTE: Express pulled :id out of the URL"},{"n":17,"text":"//   Trigger:  GET, PATCH or DELETE /games/{id}"},{"n":18,"text":"//   Inspect:  id  and  req.params.id  - the same string"},{"n":19,"text":"//   Why:      router.param runs once for every route below that has :id in its path,"},{"n":20,"text":"//             before the controller. It is the natural place to check an id."},{"n":21,"text":"//   Try:      send the id \"abc\". The controller's findById throws a CastError, and"},{"n":22,"text":"//             middleware/errorHandler.js turns it into a 400."},{"n":23,"text":"router.param('id', (req, res, next, id) => {"},{"n":24,"text":"  next();"},{"n":25,"text":"});"},{"n":26,"text":""},{"n":27,"text":"// These lines run ONCE, at startup, to build the route table. A breakpoint on them only"}]},{"id":"R4","inside":false,"title":"ROUTE: the scores router matched the URL","file":"routes/scoreRoutes.js","target":13,"fields":[{"label":"Trigger","text":"any /scores request in Swagger, after clicking Authorize"},{"label":"Inspect","text":"req.method, req.baseUrl, req.path, req.user.email"},{"label":"Why","text":"req.user is already set - middleware/authenticate.js ran BEFORE this router (BREAKPOINTS 12-15). Without a valid token you never reach this line."},{"label":"Next","text":"F5 - the method + path decide which controller runs (BREAKPOINTS S1-S5)."}],"code":[{"n":6,"text":"// ● BREAKPOINT R4 - ROUTE: the scores router matched the URL"},{"n":7,"text":"//   Trigger:  any /scores request in Swagger, after clicking Authorize"},{"n":8,"text":"//   Inspect:  req.method, req.baseUrl, req.path, req.user.email"},{"n":9,"text":"//   Why:      req.user is already set - middleware/authenticate.js ran BEFORE this router"},{"n":10,"text":"//             (BREAKPOINTS 12-15). Without a valid token you never reach this line."},{"n":11,"text":"//   Next:     F5 - the method + path decide which controller runs (BREAKPOINTS S1-S5)."},{"n":12,"text":"router.use((req, res, next) => {"},{"n":13,"text":"  next();"},{"n":14,"text":"});"},{"n":15,"text":""},{"n":16,"text":"// ● BREAKPOINT R5 - ROUTE: Express pulled :id out of the URL"}]},{"id":"R5","inside":false,"title":"ROUTE: Express pulled :id out of the URL","file":"routes/scoreRoutes.js","target":24,"fields":[{"label":"Trigger","text":"GET, PATCH or DELETE /scores/{id}"},{"label":"Inspect","text":"id  and  req.params.id  - the same string"},{"label":"Why","text":"router.param runs once for every route below that has :id in its path, before the controller. It is the natural place to check an id."},{"label":"Try","text":"send the id \"abc\". The controller's findById throws a CastError, and middleware/errorHandler.js turns it into a 400."}],"code":[{"n":16,"text":"// ● BREAKPOINT R5 - ROUTE: Express pulled :id out of the URL"},{"n":17,"text":"//   Trigger:  GET, PATCH or DELETE /scores/{id}"},{"n":18,"text":"//   Inspect:  id  and  req.params.id  - the same string"},{"n":19,"text":"//   Why:      router.param runs once for every route below that has :id in its path,"},{"n":20,"text":"//             before the controller. It is the natural place to check an id."},{"n":21,"text":"//   Try:      send the id \"abc\". The controller's findById throws a CastError, and"},{"n":22,"text":"//             middleware/errorHandler.js turns it into a 400."},{"n":23,"text":"router.param('id', (req, res, next, id) => {"},{"n":24,"text":"  next();"},{"n":25,"text":"});"},{"n":26,"text":""},{"n":27,"text":"// These lines run ONCE, at startup, to build the route table. A breakpoint on them only"}]},{"id":"J1","inside":false,"title":"the HEADER: which algorithm signed this token","file":"labs/jwt-walkthrough.js","target":41,"fields":[{"label":"Inspect","text":"header, encodedHeader"}],"code":[{"n":39,"text":"  // ● BREAKPOINT J1 - the HEADER: which algorithm signed this token"},{"n":40,"text":"  //   Inspect:  header, encodedHeader"},{"n":41,"text":"  const header = { alg: 'HS256', typ: 'JWT' };"},{"n":42,"text":"  const encodedHeader = base64url(JSON.stringify(header));"},{"n":43,"text":""},{"n":44,"text":"  // ● BREAKPOINT J2 - the PAYLOAD (claims): who, issued when, expires when"}]},{"id":"J2","inside":false,"title":"the PAYLOAD (claims): who, issued when, expires when","file":"labs/jwt-walkthrough.js","target":49,"fields":[{"label":"Inspect","text":"payload.iat and payload.exp are seconds since 1970. The token carries its OWN expiry - compare with the opaque token, whose expiry lives only in the sessions collection."},{"label":"","text":"Note:     the payload is readable by anyone. Never put a password in it."}],"code":[{"n":44,"text":"  // ● BREAKPOINT J2 - the PAYLOAD (claims): who, issued when, expires when"},{"n":45,"text":"  //   Inspect:  payload.iat and payload.exp are seconds since 1970. The token carries"},{"n":46,"text":"  //             its OWN expiry - compare with the opaque token, whose expiry lives only"},{"n":47,"text":"  //             in the sessions collection."},{"n":48,"text":"  //   Note:     the payload is readable by anyone. Never put a password in it."},{"n":49,"text":"  const now = Math.floor(Date.now() / 1000);"},{"n":50,"text":"  const payload = { ...claims, iat: now, exp: now + LIFETIME_SECONDS };"},{"n":51,"text":"  const encodedPayload = base64url(JSON.stringify(payload));"},{"n":52,"text":""}]},{"id":"J3","inside":false,"title":"the SIGNATURE: HMAC-SHA256(secret, header.payload)","file":"labs/jwt-walkthrough.js","target":57,"fields":[{"label":"Inspect","text":"signature"},{"label":"Why","text":"only someone holding JWT_SECRET can produce this value. That is how a server later proves \"I created this token\" without a database."}],"code":[{"n":53,"text":"  // ● BREAKPOINT J3 - the SIGNATURE: HMAC-SHA256(secret, header.payload)"},{"n":54,"text":"  //   Inspect:  signature"},{"n":55,"text":"  //   Why:      only someone holding JWT_SECRET can produce this value. That is how a"},{"n":56,"text":"  //             server later proves \"I created this token\" without a database."},{"n":57,"text":"  const signature = sign(`${encodedHeader}.${encodedPayload}`, secret);"},{"n":58,"text":""},{"n":59,"text":"  return `${encodedHeader}.${encodedPayload}.${signature}`;"},{"n":60,"text":"}"}]},{"id":"J4","inside":false,"title":"VERIFY: split the token into its three parts","file":"labs/jwt-walkthrough.js","target":65,"fields":[{"label":"Inspect","text":"decode(encodedHeader), decode(encodedPayload) in the DEBUG CONSOLE"}],"code":[{"n":63,"text":"  // ● BREAKPOINT J4 - VERIFY: split the token into its three parts"},{"n":64,"text":"  //   Inspect:  decode(encodedHeader), decode(encodedPayload) in the DEBUG CONSOLE"},{"n":65,"text":"  const [encodedHeader, encodedPayload, signature] = String(token).split('.');"},{"n":66,"text":"  if (!encodedHeader || !encodedPayload || !signature) return { valid: false, reason: 'not three parts' };"},{"n":67,"text":""},{"n":68,"text":"  // Never let the token choose its own algorithm - accept only the one we use."}]},{"id":"J5","inside":false,"title":"VERIFY: recompute the signature and compare","file":"labs/jwt-walkthrough.js","target":75,"fields":[{"label":"Inspect","text":"expected vs signature - equal only if header, payload AND secret are unchanged."},{"label":"Why","text":"timingSafeEqual takes the same time whether the first or last character differs, so an attacker cannot guess the signature byte by byte."}],"code":[{"n":71,"text":"  // ● BREAKPOINT J5 - VERIFY: recompute the signature and compare"},{"n":72,"text":"  //   Inspect:  expected vs signature - equal only if header, payload AND secret are unchanged."},{"n":73,"text":"  //   Why:      timingSafeEqual takes the same time whether the first or last character"},{"n":74,"text":"  //             differs, so an attacker cannot guess the signature byte by byte."},{"n":75,"text":"  const expected = sign(`${encodedHeader}.${encodedPayload}`, secret);"},{"n":76,"text":"  const same = expected.length === signature.length &&"},{"n":77,"text":"    timingSafeEqual(Buffer.from(expected), Buffer.from(signature));"},{"n":78,"text":"  if (!same) return { valid: false, reason: 'invalid signature' };"}]},{"id":"J6","inside":false,"title":"VERIFY: the signature is fine, but is the token still alive?","file":"labs/jwt-walkthrough.js","target":82,"fields":[{"label":"Inspect","text":"payload.exp vs now"}],"code":[{"n":80,"text":"  // ● BREAKPOINT J6 - VERIFY: the signature is fine, but is the token still alive?"},{"n":81,"text":"  //   Inspect:  payload.exp vs now"},{"n":82,"text":"  const payload = decode(encodedPayload);"},{"n":83,"text":"  const now = Math.floor(Date.now() / 1000);"},{"n":84,"text":"  if (payload.exp <= now) return { valid: false, reason: `expired ${now - payload.exp}s ago` };"},{"n":85,"text":""}]}]</script>
+
+<script>
+// Browser storage can be missing (private windows, blocked site data): never let it break the page
+const store = {
+  get(key, fallback) { try { const v = localStorage.getItem('l2guide:' + key); return v === null ? fallback : JSON.parse(v); } catch { return fallback; } },
+  set(key, value) { try { localStorage.setItem('l2guide:' + key, JSON.stringify(value)); } catch {} }
+};
+const $ = (s, root = document) => root.querySelector(s);
+const el = (tag, props = {}, ...kids) => { const n = Object.assign(document.createElement(tag), props); n.append(...kids.filter((k) => k != null)); return n; };
+
+// ---------- theme ----------
+const savedTheme = store.get('theme', null);
+if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+$('#theme-toggle').addEventListener('click', () => {
+  const dark = document.documentElement.dataset.theme
+    ? document.documentElement.dataset.theme === 'dark'
+    : matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.dataset.theme = dark ? 'light' : 'dark';
+  store.set('theme', document.documentElement.dataset.theme);
+});
+
+// ---------- table of contents + progress ----------
+const sections = [...document.querySelectorAll('section.step')];
+const done = new Set(store.get('done', []));
+const tocLinks = sections.map((s) => {
+  const a = el('a', { href: '#' + s.id, textContent: s.dataset.title });
+  $('#toc').append(el('li', {}, a));
+  return a;
+});
+function renderProgress() {
+  sections.forEach((s, i) => {
+    const on = done.has(s.id);
+    tocLinks[i].classList.toggle('done', on);
+    const btn = $('.done-toggle', s);
+    btn.setAttribute('aria-pressed', String(on));
+    btn.textContent = on ? '✓ Done' : 'Mark this section done';
+  });
+  $('#progress-text').textContent = `${done.size} of ${sections.length} sections done`;
+  $('#progress-bar').style.width = `${(done.size / sections.length) * 100}%`;
+}
+sections.forEach((s) => $('.done-toggle', s).addEventListener('click', () => {
+  done.has(s.id) ? done.delete(s.id) : done.add(s.id);
+  store.set('done', [...done]);
+  renderProgress();
+}));
+renderProgress();
+const spy = new IntersectionObserver((entries) => {
+  for (const e of entries) if (e.isIntersecting) tocLinks.forEach((a) => a.classList.toggle('active', a.hash === '#' + e.target.id));
+}, { rootMargin: '-30% 0px -60% 0px' });
+sections.forEach((s) => spy.observe(s));
+
+// ---------- copy buttons ----------
+document.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.copy');
+  if (!btn) return;
+  const text = btn.previousElementSibling.textContent;
+  try { await navigator.clipboard.writeText(text); btn.textContent = 'Copied'; }
+  catch { btn.textContent = 'Select & copy'; }
+  setTimeout(() => (btn.textContent = 'Copy'), 1500);
+});
+
+// ---------- lightbox ----------
+const box = $('#lightbox');
+document.addEventListener('click', (e) => {
+  const img = e.target.closest('figure.shot img');
+  if (!img) return;
+  $('#lightbox-img').src = img.src;
+  $('#lightbox-img').alt = img.alt;
+  box.showModal();
+});
+$('#lightbox-close').addEventListener('click', () => box.close());
+box.addEventListener('click', (e) => { if (e.target === box) box.close(); });
+
+// ---------- Swagger screenshot stepper ----------
+const SHOTS = [
+  { img: 'swagger-overview.png', title: 'Open Swagger', sub: 'Authorize button, then the endpoints',
+    cap: 'The Servers box shows <code>/api/v1 - This server</code>. Signup and login need no token. Every games and scores endpoint has a padlock: it needs one.',
+    alt: 'Swagger UI showing the Servers dropdown, the Authorize button and the list of endpoints' },
+  { img: 'swagger-games-401.png', title: 'GET /games without a token', sub: '401 Unauthorized', badge: 401,
+    cap: 'Expand <b>GET /games</b> → <b>Try it out</b> → <b>Execute</b> before logging in. The API answers <b>401</b>: the curl line shows no <code>Authorization</code> header was sent. This request stops at breakpoint 12.',
+    alt: 'Swagger GET /games response: code 401, message Authentication required' },
+  { img: 'swagger-signup-201.png', title: 'POST /users/signup', sub: '201 Created', badge: 201,
+    cap: 'Edit the JSON body with a name, email, password and passwordConfirmation, then <b>Execute</b>. <b>201</b>: the response contains no password. Breakpoints 1–5 stop here.',
+    alt: 'Swagger signup request body and a 201 response with the new user' },
+  { img: 'swagger-login-token.png', title: 'POST /users/login', sub: '200 OK, with a token', badge: 200,
+    cap: 'Send the same email and password. <b>200</b>: the response holds the <code>token</code> (64 hex characters) and <code>expiresAt</code>. Copy the token value, without the quotes. Breakpoints 6–11 stop here.',
+    alt: 'Swagger login response with status success, a 64-character token and expiresAt' },
+  { img: 'swagger-authorize.png', title: 'Click Authorize, paste the token', sub: 'Only the token, no "Bearer"',
+    cap: 'Scroll to the top, click <b>Authorize</b>, and paste <b>only</b> the token into <b>Value</b>. Do <b>not</b> type <code>Bearer</code>: Swagger adds it for you. Then click <b>Authorize</b>.',
+    alt: 'Swagger Available authorizations dialog with the token pasted into the Value box' },
+  { img: 'swagger-authorized.png', title: 'Authorized', sub: 'Then click Close',
+    cap: 'Swagger confirms it is authorized. Click <b>Close</b>. The padlocks on the endpoints are now closed.',
+    alt: 'Swagger dialog showing bearerAuth is authorized, with Logout and Close buttons' },
+  { img: 'swagger-games-200.png', title: 'GET /games with the token', sub: '200 OK', badge: 200,
+    cap: 'Execute <b>GET /games</b> again. The curl line now includes <code>Authorization: Bearer …</code> and the answer is <b>200</b> with the games. Breakpoints 12–16 stop here.',
+    alt: 'Swagger GET /games response: code 200 with a list of games, curl shows the Authorization Bearer header' }
+];
+let shotIndex = 0;
+const shotButtons = SHOTS.map((s, i) => {
+  const b = el('button', { type: 'button', role: 'tab' },
+    el('span', { className: 'n', textContent: i + 1 }),
+    el('span', {}, el('span', { textContent: s.title }), el('small', { textContent: s.sub })));
+  b.addEventListener('click', () => showShot(i));
+  $('#shot-list').append(el('li', {}, b));
+  return b;
+});
+function showShot(i) {
+  shotIndex = i;
+  const s = SHOTS[i];
+  $('#shot-img').src = 'img/' + s.img;
+  $('#shot-img').alt = s.alt;
+  const badge = s.badge ? ` <span class="badge ${s.badge < 400 ? 's2' : 's4'}">${s.badge}</span>` : '';
+  $('#shot-cap').innerHTML = `<b>${i + 1}. ${s.title}</b>${badge}<span class="real">real screenshot</span><br>${s.cap}`;
+  shotButtons.forEach((b, k) => b.setAttribute('aria-selected', String(k === i)));
+  $('#shot-prev').disabled = i === 0;
+  $('#shot-next').disabled = i === SHOTS.length - 1;
+}
+$('#shot-prev').addEventListener('click', () => showShot(Math.max(0, shotIndex - 1)));
+$('#shot-next').addEventListener('click', () => showShot(Math.min(SHOTS.length - 1, shotIndex + 1)));
+showShot(0);
+
+// ---------- breakpoint explorer ----------
+const BPS = JSON.parse($('#bp-data').textContent).map((b) => ({ ...b, key: b.id + (b.inside ? '-inside' : '') }));
+const GROUPS = [
+  { id: 'all', label: 'All', test: () => true },
+  { id: 'signup', label: 'Signup 1–5', test: (b) => /^[1-5]$/.test(b.id) },
+  { id: 'login', label: 'Login 6–11', test: (b) => /^([6-9]|1[01])$/.test(b.id) },
+  { id: 'token', label: 'Token 12–16', test: (b) => /^1[2-6]$/.test(b.id) },
+  { id: 'routes', label: 'Routes R', test: (b) => b.id.startsWith('R') },
+  { id: 'games', label: 'Games G', test: (b) => b.id.startsWith('G') },
+  { id: 'scores', label: 'Scores S', test: (b) => b.id.startsWith('S') },
+  { id: 'jwt', label: 'JWT lab', test: (b) => b.id.startsWith('J') }
+];
+const ORDER = (b) => {
+  const n = Number(b.id);
+  if (!Number.isNaN(n)) return n + (b.inside ? 0.5 : 0);
+  return { R: 100, G: 200, S: 300, J: 400 }[b.id[0]] + Number(b.id.slice(1));
+};
+BPS.sort((a, b) => ORDER(a) - ORDER(b));
+const seen = new Set(store.get('seen', []));
+let group = 'all';
+let current = null;
+
+GROUPS.forEach((g) => {
+  const chip = el('button', { type: 'button', className: 'chip', textContent: g.label });
+  chip.setAttribute('aria-pressed', String(g.id === group));
+  chip.addEventListener('click', () => {
+    group = g.id;
+    document.querySelectorAll('#filters .chip').forEach((c) => c.setAttribute('aria-pressed', String(c === chip)));
+    renderList();
+  });
+  $('#filters').append(chip);
+});
+
+function renderList() {
+  const test = GROUPS.find((g) => g.id === group).test;
+  const items = BPS.filter(test);
+  $('#bp-list').replaceChildren(...items.map((b) => {
+    const btn = el('button', { type: 'button', role: 'option' },
+      el('span', { className: 'id', textContent: b.id }),
+      el('span', { textContent: b.title.replace(/^[A-Z ]+:\s*/, '') + (b.inside ? ' (inside the model)' : '') }));
+    btn.setAttribute('aria-selected', String(current === b.key));
+    btn.addEventListener('click', () => select(b.key));
+    const li = el('li', {}, btn);
+    if (seen.has(b.key)) li.classList.add('seen');
+    return li;
+  }));
+  if (!items.some((b) => b.key === current) && items.length) select(items[0].key);
+}
+
+function select(key) {
+  current = key;
+  const b = BPS.find((x) => x.key === key);
+  seen.add(key);
+  store.set('seen', [...seen]);
+  const dl = el('dl', { className: 'fields' });
+  for (const f of b.fields) {
+    if (f.label) dl.append(el('dt', { textContent: f.label }), el('dd', { textContent: f.text }));
+    else dl.append(el('dd', { className: 'plain', textContent: f.text }));
+  }
+  const code = el('div', { className: 'code', role: 'region', ariaLabel: `${b.file} lines ${b.code[0].n} to ${b.code.at(-1).n}` });
+  for (const line of b.code) {
+    const row = el('div', { className: 'ln' },
+      el('span', { className: 'gutter' }),
+      el('span', { className: 'no', textContent: line.n }),
+      el('span', { className: 'txt', textContent: line.text || ' ' }));
+    if (/^\s*\/\//.test(line.text)) row.classList.add('cm');
+    if (line.n === b.target) row.classList.add('hit');
+    code.append(row);
+  }
+  $('#bp-detail').replaceChildren(
+    el('h3', { textContent: `Breakpoint ${b.id}${b.inside ? ' (inside)' : ''} · ${b.title}` }),
+    el('div', { className: 'where' }, 'File ', el('code', { textContent: b.file }), ' · click the gutter of ', el('b', { textContent: `line ${b.target}` })),
+    dl,
+    el('div', { className: 'code-label', textContent: 'From the project source (the red dot marks the line to click):' }),
+    code
+  );
+  renderList();
+}
+renderList();
+
+// ---------- request chain ----------
+const CHAIN = [
+  { id: '12', where: 'authenticate.js', text: 'The Authorization header is read. match[1] is the token; without Authorize, match is null and the request ends here with 401.' },
+  { id: '13', where: 'authenticate.js', text: 'The presented token is hashed with SHA-256, because the database only holds hashes.' },
+  { id: '14', where: 'authenticate.js', text: 'The session lookup: did this server issue the token, and is it still alive? session is a document, or null.' },
+  { id: '15', where: 'authenticate.js', text: 'req.user is attached and next() hands over. Authentication is finished.' },
+  { id: 'R2', where: 'gameRoutes.js', text: 'The games router matched. req.user is already set, because authenticate ran first.' },
+  { id: 'R3', where: 'gameRoutes.js', text: 'Express pulled :id out of the URL. Try the id "abc" to see a 400 later.' },
+  { id: 'G1', where: 'gameController.js', text: 'The controller reads one game: a document, or null (404). Nothing checks WHO may read it: authenticated, not authorized.' }
+];
+let chainAt = -1;
+function renderChain() {
+  $('#chain').replaceChildren(...CHAIN.flatMap((c, i) => {
+    const node = el('div', { className: 'node' + (i === chainAt ? ' on' : i < chainAt ? ' past' : '') },
+      el('b', { textContent: c.id }), el('small', { textContent: c.where }));
+    return i ? [el('span', { className: 'arrow', textContent: '→', ariaHidden: 'true' }), node] : [node];
+  }));
+  $('#chain-text').textContent = chainAt < 0
+    ? 'Press "Next stop" to send GET /games/{id} with a valid token.'
+    : `Stop ${chainAt + 1} of ${CHAIN.length} · Breakpoint ${CHAIN[chainAt].id}: ${CHAIN[chainAt].text}`;
+  $('#chain-next').disabled = chainAt >= CHAIN.length - 1;
+}
+$('#chain-next').addEventListener('click', () => { chainAt++; renderChain(); });
+$('#chain-reset').addEventListener('click', () => { chainAt = -1; renderChain(); });
+renderChain();
+
+// ---------- exercises ----------
+const EXERCISES = [
+  { q: 'Sign up two users with the same password. At breakpoint 3, record both salts. Are the hashes equal? Why not?', hint: 'Breakpoint 3 · models/userModel.js' },
+  { q: 'At breakpoint 8 (inside the model), run bcrypt.getSalt(this.password) in the Debug Console. Where did you see this value before?', hint: 'Breakpoints 3 and 8 · compare the two values' },
+  { q: 'Log in and record the token (cover it in screenshots). In Compass/Atlas, find its session. Which field matches the value from breakpoint 11, and why is the token itself not stored?', hint: 'Breakpoint 11 · the sessions collection' },
+  { q: 'Change one character of the token in Swagger\'s Authorize box and call GET /games. At which breakpoint and line is the request rejected, and what is session?', hint: 'Breakpoints 12–14' },
+  { q: 'With TOKEN_LIFETIME_MINUTES=1, show the same token accepted and then rejected. Which condition in which line changed its answer?', hint: 'Breakpoint 14 · expiresAt' },
+  { q: 'As one user, delete a game created by another user. Which breakpoint shows the request was authenticated? Which line would have to change to make it authorized?', hint: 'Breakpoints 15 and G4' },
+  { q: 'Set R1–R5, G1–G4 and S1–S5, then send one request of every kind in Swagger. For each request, list the breakpoints it stopped at, in order.', hint: 'Use Step 5 as a model' },
+  { q: 'At S3, submit a score with someone else\'s playerEmail. Write the one line that would make the server use req.user instead, and say why userId is null today.', hint: 'Breakpoint S3 · controllers/scoreController.js' },
+  { q: 'In the JWT lab, what does the server need in order to trust a JWT, compared with what it needs to trust this API\'s opaque token?', hint: 'Breakpoints J5 and 14' }
+];
+const answers = store.get('answers', {});
+$('#exercise-list').replaceChildren(...EXERCISES.map((ex, i) => {
+  const ta = el('textarea', { value: answers[i] || '', placeholder: 'File, line and value…', ariaLabel: `Answer to exercise ${i + 1}` });
+  const saved = el('span', { className: 'saved' });
+  ta.addEventListener('input', () => { answers[i] = ta.value; store.set('answers', answers); saved.textContent = 'Saved in this browser'; });
+  return el('details', { className: 'ex' },
+    el('summary', {}, `${i + 1}. ${ex.q}`),
+    el('div', { className: 'body' }, el('p', { className: 'hint', textContent: 'Where to look: ' + ex.hint }), ta, saved));
+}));
+</script>
+</body>
+</html>

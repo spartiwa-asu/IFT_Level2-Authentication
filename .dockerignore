@@ -1,0 +1,15 @@
+node_modules
+npm-debug.log
+logs
+.env
+.env.bak
+config.env
+config.env.bak
+.git
+.gitignore
+.DS_Store
+tests
+coverage
+*.md
+requests.http
+.env.*

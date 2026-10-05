@@ -1,0 +1,26 @@
+{
+  // Run and Debug (Ctrl+Shift+D / Cmd+Shift+D): pick a configuration, then press F5.
+  // See DEBUGGING.md for the breakpoint walkthrough.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug API server",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/server.js",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      // Step over library code (Express, Mongoose, bcrypt) so F11 stays in our files
+      "skipFiles": ["<node_internals>/**", "${workspaceFolder}/node_modules/**"]
+    },
+    {
+      "name": "Debug JWT lab",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/labs/jwt-walkthrough.js",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ]
+}
